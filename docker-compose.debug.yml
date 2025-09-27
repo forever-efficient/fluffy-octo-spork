@@ -1,0 +1,6 @@
+services:
+  psychicwaffle:
+    image: psychicwaffle
+    build:
+      context: .
+      dockerfile: ./Dockerfile

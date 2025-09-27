@@ -1,0 +1,949 @@
+{
+  "name": "DenverProtests_RedditScraper",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "getAll",
+        "subreddit": "DenverProtests",
+        "limit": 25,
+        "filters": {
+          "category": "new"
+        }
+      },
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        -128
+      ],
+      "id": "ec6cf2dc-dc13-4806-96db-8407256ff187",
+      "name": "Get many posts",
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "kgDbxVy9Kcu9mxxr",
+          "name": "Reddit account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cbf8b72f-55ae-4602-b7e3-bec79d5f5ba2",
+              "leftValue": "={{ $json.selftext }}",
+              "rightValue": "=(protest|gathering|demonstration|gather|rally|crime|kill|fetty|plug|shot|shoot|drug|clear|gang|secret|bomb|explosion|explode|rob|zeen|zeenies|fent|clear|blues|unicorn|bless|rex|fight)",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "2b458ae5-ccba-424e-8027-32bad3d32afe",
+              "leftValue": "={{ $json.title }}",
+              "rightValue": "=(protest|gathering|demonstration|gather|rally|crime|kill|fetty|plug|shot|shoot|drug|clear|gang|secret|bomb|explosion|explode|rob|zeen|zeenies|fent|clear|blues|unicorn|bless|rex|fight)",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.2,
+      "position": [
+        -48,
+        176
+      ],
+      "id": "17febb27-4547-48f2-b551-8aa948786759",
+      "name": "Filter",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "resource": "postComment",
+        "operation": "getAll",
+        "subreddit": "={{ $json.subreddit }}",
+        "postId": "={{ $json.id }}",
+        "limit": 10
+      },
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -128
+      ],
+      "id": "5d6319b7-d895-4444-8b7c-123a12afc916",
+      "name": "Get many comments in a post",
+      "executeOnce": false,
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "kgDbxVy9Kcu9mxxr",
+          "name": "Reddit account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -640,
+        176
+      ],
+      "id": "5dc24657-cfb2-4291-ac1a-21dd258f008e",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "name",
+              "field2": "parent_id"
+            }
+          ]
+        },
+        "joinMode": "enrichInput1",
+        "options": {
+          "multipleMatches": "all"
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1088,
+        192
+      ],
+      "id": "86bb6742-938b-41ff-a2ce-16d333222fdf",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "subreddit": "DenverProtests",
+        "limit": 25,
+        "filters": {
+          "category": "hot"
+        }
+      },
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        80
+      ],
+      "id": "b2c144e8-56a9-4ea9-b449-f2ddd9f5b142",
+      "name": "Get many posts1",
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "kgDbxVy9Kcu9mxxr",
+          "name": "Reddit account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "subreddit": "DenverProtests",
+        "limit": 25,
+        "filters": {
+          "category": "top"
+        }
+      },
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        288
+      ],
+      "id": "87f0f146-1d56-45f1-9ee3-9bed683528f6",
+      "name": "Get many posts2",
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "kgDbxVy9Kcu9mxxr",
+          "name": "Reddit account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "subreddit": "DenverProtests",
+        "limit": 25,
+        "filters": {
+          "category": "rising"
+        }
+      },
+      "type": "n8n-nodes-base.reddit",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        480
+      ],
+      "id": "991f3490-7c18-475e-8e80-59a98d2532e9",
+      "name": "Get many posts3",
+      "credentials": {
+        "redditOAuth2Api": {
+          "id": "kgDbxVy9Kcu9mxxr",
+          "name": "Reddit account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-1.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-1.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an expert investigator highly trained and capable of analyzing people in terms of threat assessments. \n\nFirst, the data being passed in is below as \"body\" and \"selftext\" which are linked to a single component. \n\nYou will take the below comments and messages to determine whether or not a threat exists to persons or property. Additionally, you will also look for signs of conspiracy, planning or plotting to take action. Your threshold for threats is low, and you take jokes or subtle anger and aggressive speach as a threat. If none of these exists you will then check if there are details on gathering in or around a person or property and report back. If the text is harmless and just chatter you will ignore it. In your output include a short summary of the text analyzed and how you came to your conclusion.\n\n {{ $json.body}}\n{{ $json.selftext }}\n\noutput keys will always be \"threat\" with a value of true or false, \"gathering\" with a value of true or false, \"rationale\" with your reasoning as string, \"selftext\" with {{ $json.selftext }}, \"body\" {{ $json.body }}, \"created\" with {{ $json.created }}, \"title\" with  {{ $json.title }}, and \"permalink\" with {{ $json.permalink }}.",
+              "role": "model"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        192
+      ],
+      "id": "0d0c04d9-c2d9-4d40-af7c-9aa51376a0a2",
+      "name": "Message a model",
+      "executeOnce": false,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "aVTUxtpyxZ4MWWF5",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content.parts[0].text.parseJson(\"threat\").threat }}",
+                    "rightValue": "no threat",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "3f89e28b-8267-42bd-b6c6-e6e64552b340"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "648100c2-c8f0-463a-b46b-7dcc2a008e9d",
+                    "leftValue": "={{ $json.content.parts[0].text.parseJson(\"gathering\").gathering }}",
+                    "rightValue": "no details on gathering",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "93436022-bc13-42cf-acf8-e69204c53629",
+                    "leftValue": "={{ $json.content.parts[0].text.parseJson(\"threat\").threat }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "04fa906c-0622-4e1c-af7c-48bd5264e36b",
+                    "leftValue": "={{ $json.content.parts[0].text.parseJson(\"gathering\").gathering }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "ignoreCase": true,
+          "allMatchingOutputs": false
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1776,
+        160
+      ],
+      "id": "39019970-d270-4c9c-932f-a0bd223d818a",
+      "name": "Switch",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1CZXPR29chTLZt6hNwPZR9dMoXa2AVhuZdLlb6SZzGCE",
+          "mode": "list",
+          "cachedResultName": "Gatherings",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CZXPR29chTLZt6hNwPZR9dMoXa2AVhuZdLlb6SZzGCE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CZXPR29chTLZt6hNwPZR9dMoXa2AVhuZdLlb6SZzGCE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"created\").created.toDateTime('s'), \"Unknown\") }}",
+            "Title": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"title\").title, \"Unknown\") }}",
+            "SourceURL": "=https://reddit.com{{ $ifEmpty($json.content.parts[0].text.parseJson(\"permalink\").permalink, \"Unkonwn\") }}",
+            "Content": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"selftext\").selftext, \"Unknown\") }}",
+            "Comments": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"body\").body, \"Unknown\") }}",
+            "ThreatType": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"rationale\").rationale, \"Unknown\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SourceURL",
+              "displayName": "SourceURL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content",
+              "displayName": "Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Comments",
+              "displayName": "Comments",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ThreatType",
+              "displayName": "ThreatType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        2192,
+        128
+      ],
+      "id": "894fc32e-081f-4173-a24e-8c73b5496992",
+      "name": "Append row in sheet1",
+      "credentials": {
+        "googleApi": {
+          "id": "uL3gcGmZm3AarltG",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "16f93Zvb8lZta6U1A8LkrwUeUNhEStViCghZAXPgzsho",
+          "mode": "list",
+          "cachedResultName": "Threats",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16f93Zvb8lZta6U1A8LkrwUeUNhEStViCghZAXPgzsho/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CZXPR29chTLZt6hNwPZR9dMoXa2AVhuZdLlb6SZzGCE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"created\").created.toDateTime('s'), \"Unknown\") }}",
+            "Title": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"title\").title, \"Unknown\") }}",
+            "SourceURL": "=https://reddit.com{{ $ifEmpty($json.content.parts[0].text.parseJson(\"permalink\").permalink, \"Unkonwn\") }}",
+            "Content": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"selftext\").selftext, \"Unknown\") }}",
+            "Comments": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"body\").body, \"Unknown\") }}",
+            "ThreatType": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"rationale\").rationale, \"Unknown\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SourceURL",
+              "displayName": "SourceURL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content",
+              "displayName": "Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Comments",
+              "displayName": "Comments",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ThreatType",
+              "displayName": "ThreatType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        2192,
+        -32
+      ],
+      "id": "25b6780f-6f42-438d-833a-37916f9ff0d7",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleApi": {
+          "id": "uL3gcGmZm3AarltG",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1BHIOle7kLOvyOj6YHdd2J4lMTNuky-Fz6lLYKZm_B2E",
+          "mode": "list",
+          "cachedResultName": "Processed",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1BHIOle7kLOvyOj6YHdd2J4lMTNuky-Fz6lLYKZm_B2E/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1CZXPR29chTLZt6hNwPZR9dMoXa2AVhuZdLlb6SZzGCE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"created\").created.toDateTime('s'), \"Unknown\") }}",
+            "Title": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"title\").title, \"Unknown\") }}",
+            "SourceURL": "=https://reddit.com{{ $ifEmpty($json.content.parts[0].text.parseJson(\"permalink\").permalink, \"Unkonwn\") }}",
+            "Content": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"selftext\").selftext, \"Unknown\") }}",
+            "Comments": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"body\").body, \"Unknown\") }}",
+            "ThreatType": "={{ $ifEmpty($json.content.parts[0].text.parseJson(\"rationale\").rationale, \"Unknown\") }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SourceURL",
+              "displayName": "SourceURL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Content",
+              "displayName": "Content",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Comments",
+              "displayName": "Comments",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ThreatType",
+              "displayName": "ThreatType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        2192,
+        336
+      ],
+      "id": "98a41a8d-ae90-45cd-bcd1-549d7c43d73b",
+      "name": "Append row in sheet2",
+      "credentials": {
+        "googleApi": {
+          "id": "uL3gcGmZm3AarltG",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2544,
+        128
+      ],
+      "id": "0538584a-f27e-444f-a4f8-f464d24c0eb9",
+      "name": "Aggregate1"
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        640,
+        -128
+      ],
+      "id": "00fbca08-f188-406e-a3ff-e5f5c1eb6da0",
+      "name": "Remove Duplicates"
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.selftext }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        640,
+        176
+      ],
+      "id": "174d76cd-ba3d-4e01-8e3e-841e48092d5d",
+      "name": "Remove Duplicates1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get many posts": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Get many comments in a post",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Remove Duplicates1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many comments in a post": {
+      "main": [
+        [
+          {
+            "node": "Remove Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many posts",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get many posts1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get many posts2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get many posts3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many posts1": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many posts2": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many posts3": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append row in sheet2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet2": {
+      "main": [
+        [
+          {
+            "node": "Aggregate1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Remove Duplicates1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "versionId": "442d2b79-49e0-48b5-a432-827fdeff13ea",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d410d616d2e66edd093f3b287f500ae19fea1907c2fd86cb81f4159b1117a048"
+  },
+  "id": "4WWliI6OkVzLGnqp",
+  "tags": []
+}
