@@ -8,13 +8,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "ddcef18f-a9b9-45fc-b44a-d91f23d7c710",
+      "id": "44cb37eb-3b95-4271-8384-1bcec2fc383a",
       "name": "Telegram Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -800,
-        144
+        -1424,
+        96
       ],
       "webhookId": "191c5774-e8b2-4e17-8786-e641403e5046"
     },
@@ -25,17 +25,22 @@
             {
               "value1": "={{ $json.body.message?.text || '' }}",
               "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{ $json.body.message?.voice?.file_id || '' }}",
+              "operation": "isNotEmpty"
             }
           ]
-        }
+        },
+        "combineOperation": "any"
       },
-      "id": "3b31b369-c60f-47ba-a41d-f103fb56406f",
+      "id": "c596763d-1706-4b68-88aa-705f41bde097",
       "name": "Has Message Content",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -592,
-        144
+        -1216,
+        96
       ]
     },
     {
@@ -49,13 +54,13 @@
           ]
         }
       },
-      "id": "a548a5ef-79dc-4972-94dd-d76ba582c03b",
+      "id": "a092f4e4-97d5-4c5f-b854-29d17a141520",
       "name": "Is Voice Message",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -368,
-        32
+        -992,
+        -16
       ]
     },
     {
@@ -64,13 +69,13 @@
         "fileId": "={{ $json.body.message.voice.file_id }}",
         "additionalFields": {}
       },
-      "id": "642586ac-dc02-468c-8e93-a4a3066fce04",
+      "id": "3ecd397c-0174-4773-a272-9d65de89f014",
       "name": "Get Voice File",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        -144,
-        -48
+        -816,
+        -160
       ],
       "webhookId": "ee2240fc-1d1d-41f6-bfa6-1b126b8ceadf",
       "credentials": {
@@ -82,6 +87,19 @@
     },
     {
       "parameters": {
+        "jsCode": "// Fix file format for Groq API compatibility\nconst items = [];\n\nfor (const item of $input.all()) {\n  // Get the binary data from Telegram\n  const binaryData = item.binary?.data;\n  \n  if (binaryData) {\n    // Set proper filename and mime type for Groq API\n    binaryData.fileName = 'voice_message.ogg';\n    binaryData.mimeType = 'audio/ogg';\n    \n    items.push({\n      json: item.json,\n      binary: {\n        data: binaryData\n      }\n    });\n  } else {\n    items.push(item);\n  }\n}\n\nreturn items;"
+      },
+      "id": "d0f965c4-7bcf-4ed5-b0a7-0293d11e84b9",
+      "name": "Fix Audio Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        -208
+      ]
+    },
+    {
+      "parameters": {
         "method": "POST",
         "url": "https://api.groq.com/openai/v1/audio/transcriptions",
         "sendHeaders": true,
@@ -89,7 +107,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer PLACEHOLDER"
+              "value": "Bearer PLACEHOLDER_GROQ_API_KEY"
             }
           ]
         },
@@ -98,16 +116,13 @@
         "bodyParameters": {
           "parameters": [
             {
+              "parameterType": "formBinaryData",
               "name": "file",
-              "value": "={{ $json.body.message?.voice?.file_id || $json.message?.voice?.file_id }}"
+              "inputDataFieldName": "data"
             },
             {
               "name": "model",
               "value": "whisper-large-v3"
-            },
-            {
-              "name": "language",
-              "value": "en"
             },
             {
               "name": "response_format",
@@ -117,26 +132,26 @@
         },
         "options": {}
       },
-      "id": "902c63d0-727b-495a-ab46-825ff18f6432",
+      "id": "4fe806ff-ee4d-4961-8b2d-c79f4d73868a",
       "name": "Transcribe Voice (Groq)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        80,
-        -48
+        -448,
+        -160
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Extract and normalize message content\nconst items = [];\n\nfor (const item of $input.all()) {\n  let messageText = '';\n  let userId = '';\n  let chatId = '';\n  let messageId = '';\n  \n  // Handle different message types - check for body wrapper\n  const message = item.json.body?.message || item.json.message;\n  \n  if (message) {\n    userId = message.from.id;\n    chatId = message.chat.id;\n    messageId = message.message_id;\n    \n    // Text message\n    if (message.text) {\n      messageText = message.text;\n    }\n    // Transcribed voice message\n    else if (item.json.text) {\n      messageText = item.json.text;\n    }\n  }\n  \n  items.push({\n    json: {\n      messageText: messageText,\n      userId: userId,\n      chatId: chatId,\n      messageId: messageId,\n      timestamp: new Date().toISOString(),\n      originalMessage: item.json\n    }\n  });\n}\n\nreturn items;"
+        "jsCode": "// Extract and normalize message content\nconst items = [];\n\nfor (const item of $input.all()) {\n  let messageText = '';\n  let userId = '';\n  let chatId = '';\n  let messageId = '';\n  \n  // Handle different message types - check for body wrapper\n  const message = item.json.body?.message || item.json.message;\n  \n  if (message) {\n    userId = message.from.id;\n    chatId = message.chat.id;\n    messageId = message.message_id;\n    \n    // Text message\n    if (message.text) {\n      messageText = message.text;\n    }\n  }\n  \n  // Handle transcribed voice message from Groq API response\n  if (item.json.text && !messageText) {\n    messageText = item.json.text;\n    // Get user info from the original webhook data if available\n    const webhookData = $('Telegram Webhook').first()?.json;\n    if (webhookData?.body?.message) {\n      userId = webhookData.body.message.from.id;\n      chatId = webhookData.body.message.chat.id;\n      messageId = webhookData.body.message.message_id;\n    }\n  }\n  \n  items.push({\n    json: {\n      messageText: messageText,\n      userId: userId,\n      chatId: chatId,\n      messageId: messageId,\n      timestamp: new Date().toISOString(),\n      originalMessage: item.json\n    }\n  });\n}\n\nreturn items;"
       },
-      "id": "078a71f0-c654-472e-bb9a-5f6a4405c3c6",
+      "id": "1259a389-b2b5-4a1a-9b64-8b78286878da",
       "name": "Normalize Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -144,
-        144
+        -768,
+        96
       ]
     },
     {
@@ -152,7 +167,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer PLACEHOLDER"
+              "value": "Bearer PLACEHOLDER_GROQ_API_KEY"
             }
           ]
         },
@@ -161,13 +176,13 @@
         "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [{\n      \"role\": \"system\",\n      \"content\": \"You are a content classifier for a legal assistant bot. Determine if messages are related to legal/criminal matters.\\n\\nRespond with 'VALID' if the message contains:\\n- Direct legal questions\\n- Criminal scenarios or situations\\n- Descriptions of potential crimes or violations\\n- Court cases, statutes, or legal procedures\\n- Requests for legal advice or analysis\\n- Fact patterns that may involve legal issues\\n- Property damage or destruction scenarios\\n- Domestic disputes or relationship conflicts with legal implications\\n- Theft, assault, harassment, or any criminal behavior\\n- Civil law matters (contracts, torts, property disputes)\\n\\nRespond with 'INVALID: [brief reason]' if the message is clearly unrelated to legal matters (weather, sports, general chat, etc.).\\n\\nExamples of VALID messages:\\n- 'What are Miranda rights?'\\n- 'A wife smashes her husband's phone'\\n- 'Someone took my bike without permission'\\n- 'What happens if I don't pay a traffic ticket?'\\n- 'My neighbor is playing loud music at 2am'\\n- 'Wife smashed my phone'\\n- 'My landlord won't fix the heat'\\n- 'Someone hit my car and drove away'\"\n  }, {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.messageText }}\"\n  }]\n} ",
         "options": {}
       },
-      "id": "5a114c46-7d9b-4006-acb1-9c412e4f4485",
+      "id": "93403ddd-4797-43c0-9b96-94ee2ca123c1",
       "name": "Validate Content (Groq)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        80,
-        144
+        -544,
+        96
       ]
     },
     {
@@ -182,13 +197,13 @@
           ]
         }
       },
-      "id": "151bf120-2323-4dcd-bb14-fd746045ca45",
+      "id": "74969d44-26c4-4ef0-936a-f6eee1dfadc6",
       "name": "Is Valid Request",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        304,
-        144
+        -320,
+        96
       ]
     },
     {
@@ -211,13 +226,13 @@
           ]
         }
       },
-      "id": "d3f96168-a2f9-4cc2-959c-0c02eac1417d",
+      "id": "0c8a80e9-26f5-491e-8c73-c701669bfe44",
       "name": "Log Rejection",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        528,
-        256
+        -96,
+        208
       ],
       "credentials": {
         "supabaseApi": {
@@ -232,13 +247,13 @@
         "text": "=I'm sorry, but I can only assist with legal and criminal matters. Your message appears to be outside my scope of expertise.\n\nReason: {{ $('Validate Content (Groq)').item.json.choices[0].message.content }}\n\nI can help you with:\n• Direct legal questions (\"What are Miranda rights?\")\n• Criminal scenarios (\"Someone took my bike without asking\")\n• Court cases and rulings\n• Legal procedures and statutes\n• Fact patterns involving potential crimes\n• Civil and criminal law analysis",
         "additionalFields": {}
       },
-      "id": "a4ea1b0d-78d3-4b16-8165-39e1978e796c",
+      "id": "62d86cbc-dbee-4ed5-ab83-41cbb67cd815",
       "name": "Send Rejection Response",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        736,
-        256
+        112,
+        208
       ],
       "webhookId": "bfbe4895-07b0-4a1c-81d8-a6f04db77463",
       "credentials": {
@@ -261,13 +276,13 @@
           ]
         }
       },
-      "id": "5328d968-7224-45ab-9e3c-1e9fbd50191a",
+      "id": "d2306728-c696-48c1-8d3f-60ef931296cd",
       "name": "Get Conversation Memory",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        528,
-        16
+        -96,
+        -32
       ],
       "credentials": {
         "supabaseApi": {
@@ -286,13 +301,13 @@
           ]
         }
       },
-      "id": "cedfc36c-1464-4a13-93a7-5b28ee70eaeb",
+      "id": "5fac8418-8900-4884-b238-9cdedcdd35dd",
       "name": "Get Legal Documents",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        528,
-        -176
+        -96,
+        -224
       ],
       "credentials": {
         "supabaseApi": {
@@ -305,13 +320,13 @@
       "parameters": {
         "jsCode": "// Prepare context for AI analysis\nconst items = [];\n\nconst normalizedMessage = $('Normalize Message').item.json;\nconst conversationMemory = $('Get Conversation Memory').all();\nconst legalDocs = $('Get Legal Documents').all();\n\n// Build conversation history\nlet conversationHistory = '';\nif (conversationMemory.length > 0 && conversationMemory[0].json.conversation_history) {\n  conversationHistory = conversationMemory[0].json.conversation_history;\n}\n\n// Build document context\nlet documentContext = '';\nif (legalDocs.length > 0) {\n  documentContext = legalDocs.map(doc => {\n    return `Document: ${doc.json.title}\\nType: ${doc.json.type}\\nContent: ${doc.json.content}\\n---`;\n  }).join('\\n');\n}\n\n// Create AI prompt\nconst aiPrompt = `You are a legal AI assistant specializing in criminal law and legal matters. You excel at analyzing both direct legal questions and criminal scenarios/fact patterns.\n\nWhen analyzing scenarios (like \"a wife smashes her husband's phone\"), identify ALL potential legal violations, charges, statutes, and case precedents that could apply. Consider different jurisdictions and varying circumstances.\n\nFor direct legal questions, provide comprehensive explanations with relevant statutes and case law.\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nCURRENT QUESTION/SCENARIO:\n${normalizedMessage.messageText}\n\nLEGAL DOCUMENTS CONTEXT:\n${documentContext}\n\nPlease provide your response in the following format:\n\n**SHORT SUMMARY:**\n[Brief summary of relevant statutes/laws/cases that apply to this scenario]\n\n**DETAILED BREAKDOWN:**\n[For each potential violation/legal issue:\n• Specific statute or law\n• Elements that must be proven\n• How the scenario meets (or doesn't meet) those elements\n• Potential penalties/consequences\n• Relevant case precedents]\n\n**CONCLUSION:**\n[Summary of most likely charges/violations, defenses, and recommended next steps]\n\nFor scenarios, analyze from multiple angles: criminal charges, civil liability, defenses, and jurisdictional variations. Be thorough and consider various interpretations of the facts.`;\n\nitems.push({\n  json: {\n    aiPrompt: aiPrompt,\n    userMessage: normalizedMessage.messageText,\n    userId: normalizedMessage.userId,\n    chatId: normalizedMessage.chatId,\n    conversationHistory: conversationHistory,\n    timestamp: normalizedMessage.timestamp\n  }\n});\n\nreturn items;"
       },
-      "id": "38f7256c-e0bb-4e56-a1e0-ae517cc7d4fc",
+      "id": "da004606-5767-4ebe-818e-3bf478907953",
       "name": "Prepare AI Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1168,
-        16
+        544,
+        -32
       ]
     },
     {
@@ -327,7 +342,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer PLACEHOLDER"
+              "value": "Bearer PLACEHOLDER_GROQ_API_KEY"
             }
           ]
         },
@@ -336,26 +351,26 @@
         "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [{\n      \"role\": \"system\",\n      \"content\": \"You are a specialized legal AI assistant with expertise in criminal law and legal matters. Provide comprehensive, accurate legal analysis based on the provided context.\"\n  }, {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.aiPrompt) }}\n  }],\n  \"max_tokens\": 2000,\n  \"temperature\": 0.3\n}",
         "options": {}
       },
-      "id": "9bd239b7-43ef-4145-bf9a-12709ddfc3a0",
+      "id": "59a92892-ed1d-425b-8b59-f998be0eb9bd",
       "name": "AI Legal Analysis (Groq)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        1392,
-        16
+        768,
+        -32
       ]
     },
     {
       "parameters": {
         "jsCode": "// Format AI response and update conversation history\nconst items = [];\n\n// Get AI response from Groq format\nconst aiResponse = $json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content || 'Unable to generate response';\nconst context = $('Prepare AI Context').item.json;\n\n// Update conversation history\nconst newConversationEntry = `User: ${context.userMessage}\\nAssistant: ${aiResponse}\\n---\\n`;\nconst updatedHistory = context.conversationHistory + newConversationEntry;\n\n// Format response for Telegram\nlet formattedResponse = aiResponse\n  .replace(/\\*\\*(.*?)\\*\\*/g, '*$1*')  // Convert ** to * for Telegram\n  .replace(/###/g, '🔸')  // Replace ### with bullet points\n  .replace(/##/g, '📋');  // Replace ## with icons\n\n// Telegram message limit is 4096 characters\nconst MAX_LENGTH = 4000; // Leave some buffer\n\nif (formattedResponse.length > MAX_LENGTH) {\n  // Try to find a good break point (end of sentence, paragraph, or section)\n  let truncateAt = MAX_LENGTH;\n  const breakPoints = ['. ', '\\n\\n', '\\n**', '\\n•'];\n  \n  for (const breakPoint of breakPoints) {\n    const lastBreak = formattedResponse.lastIndexOf(breakPoint, MAX_LENGTH - 100);\n    if (lastBreak > MAX_LENGTH / 2) {\n      truncateAt = lastBreak + breakPoint.length;\n      break;\n    }\n  }\n  \n  formattedResponse = formattedResponse.substring(0, truncateAt) + '\\n\\n📝 *Response truncated due to length. Ask follow-up questions for more details.*';\n}\n\nitems.push({\n  json: {\n    formattedResponse: formattedResponse,\n    userId: context.userId,\n    chatId: context.chatId,\n    updatedConversationHistory: updatedHistory,\n    timestamp: context.timestamp,\n    rawAiResponse: aiResponse\n  }\n});\n\nreturn items;"
       },
-      "id": "b5075ef8-32d8-4594-a237-f686ae4d7149",
+      "id": "2d804c35-6cd2-47a5-8838-95e83da096dd",
       "name": "Format Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1616,
-        16
+        992,
+        -32
       ]
     },
     {
@@ -374,13 +389,13 @@
           ]
         }
       },
-      "id": "ba4458fe-fcfa-4bc5-b472-6b412f0729dc",
+      "id": "9c4e9e5e-80e1-4728-8ab6-21d134080d22",
       "name": "Update Conversation Memory",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1824,
-        -48
+        1200,
+        -96
       ],
       "credentials": {
         "supabaseApi": {
@@ -397,13 +412,13 @@
           "parse_mode": "Markdown"
         }
       },
-      "id": "db6568c1-b662-499f-9879-dd8bf70eadda",
+      "id": "a415b2f2-3c27-4219-85e9-abae804d4211",
       "name": "Send Legal Response",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        1824,
-        80
+        1200,
+        32
       ],
       "webhookId": "8e9aa2f5-0f18-4398-a116-f2f5984c55a8",
       "credentials": {
@@ -419,13 +434,13 @@
         "responseBody": "={{ { \"status\": \"success\", \"message\": \"Message processed successfully\" } }}",
         "options": {}
       },
-      "id": "dad10ca0-f01b-456a-8de8-5256c7a32785",
+      "id": "3cfe10ff-c922-452d-b731-4babf6fde2e4",
       "name": "Webhook Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        2048,
-        16
+        1424,
+        -32
       ]
     },
     {
@@ -433,10 +448,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        896,
-        16
+        272,
+        -32
       ],
-      "id": "4095eaaf-7b27-46b6-a618-91b2b0c1e5ea",
+      "id": "e8d0a9b6-7398-4d62-bd05-c6c75a09d60a",
       "name": "Merge"
     }
   ],
@@ -446,14 +461,14 @@
         "json": {
           "headers": {
             "host": "n8n.modernwizard.win",
-            "content-length": "307",
+            "content-length": "463",
             "accept-encoding": "gzip, br",
             "cdn-loop": "cloudflare; loops=1",
             "cf-connecting-ip": "91.108.5.76",
             "cf-ipcountry": "NL",
-            "cf-ray": "98ca98bf0cb36691-AMS",
+            "cf-ray": "98caca0c787ce18e-AMS",
             "cf-visitor": "{\"scheme\":\"https\"}",
-            "cf-warp-tag-id": "a3b4914f-08fd-4ab2-8762-a23644f0292c",
+            "cf-warp-tag-id": "301047e0-45cc-4792-9107-e54ecb369660",
             "connection": "keep-alive",
             "content-type": "application/json",
             "x-forwarded-for": "91.108.5.76",
@@ -462,9 +477,9 @@
           "params": {},
           "query": {},
           "body": {
-            "update_id": 383995308,
+            "update_id": 383995315,
             "message": {
-              "message_id": 25,
+              "message_id": 35,
               "from": {
                 "id": 7998792537,
                 "is_bot": false,
@@ -478,8 +493,14 @@
                 "username": "CleverCortex",
                 "type": "private"
               },
-              "date": 1760146273,
-              "text": "Man stole my car"
+              "date": 1760148292,
+              "voice": {
+                "duration": 1,
+                "mime_type": "audio/ogg",
+                "file_id": "AwACAgEAAxkBAAMjaOm7RLGFesHPlDJY9rH-BdDRa5QAAnkFAAL4FVBHiBfIRzR2vw02BA",
+                "file_unique_id": "AgADeQUAAvgVUEc",
+                "file_size": 6342
+              }
             }
           },
           "webhookUrl": "https://n8n.modernwizard.win/webhook/telegram-webhook",
@@ -530,6 +551,17 @@
       ]
     },
     "Get Voice File": {
+      "main": [
+        [
+          {
+            "node": "Fix Audio Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fix Audio Format": {
       "main": [
         [
           {
