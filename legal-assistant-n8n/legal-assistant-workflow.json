@@ -8,13 +8,13 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "44cb37eb-3b95-4271-8384-1bcec2fc383a",
+      "id": "5801a7dc-8eb0-44c4-b9e9-162aa5a52589",
       "name": "Telegram Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -1424,
-        96
+        -2048,
+        496
       ],
       "webhookId": "191c5774-e8b2-4e17-8786-e641403e5046"
     },
@@ -34,13 +34,13 @@
         },
         "combineOperation": "any"
       },
-      "id": "c596763d-1706-4b68-88aa-705f41bde097",
+      "id": "7a15e131-6174-4ddd-94d2-2e7ec037d0ed",
       "name": "Has Message Content",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -1216,
-        96
+        -1840,
+        496
       ]
     },
     {
@@ -54,13 +54,13 @@
           ]
         }
       },
-      "id": "a092f4e4-97d5-4c5f-b854-29d17a141520",
+      "id": "c068780e-fc1f-44f0-9042-a09a5f03fe5d",
       "name": "Is Voice Message",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -992,
-        -16
+        -1616,
+        384
       ]
     },
     {
@@ -69,13 +69,13 @@
         "fileId": "={{ $json.body.message.voice.file_id }}",
         "additionalFields": {}
       },
-      "id": "3ecd397c-0174-4773-a272-9d65de89f014",
+      "id": "d593902b-dd1c-4419-b097-c34faf794ee8",
       "name": "Get Voice File",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        -816,
-        -160
+        -1440,
+        240
       ],
       "webhookId": "ee2240fc-1d1d-41f6-bfa6-1b126b8ceadf",
       "credentials": {
@@ -89,13 +89,13 @@
       "parameters": {
         "jsCode": "// Fix file format for Groq API compatibility\nconst items = [];\n\nfor (const item of $input.all()) {\n  // Get the binary data from Telegram\n  const binaryData = item.binary?.data;\n  \n  if (binaryData) {\n    // Set proper filename and mime type for Groq API\n    binaryData.fileName = 'voice_message.ogg';\n    binaryData.mimeType = 'audio/ogg';\n    \n    items.push({\n      json: item.json,\n      binary: {\n        data: binaryData\n      }\n    });\n  } else {\n    items.push(item);\n  }\n}\n\nreturn items;"
       },
-      "id": "d0f965c4-7bcf-4ed5-b0a7-0293d11e84b9",
+      "id": "9ff5ad33-a581-4d8c-9c2d-c760c9442532",
       "name": "Fix Audio Format",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -624,
-        -208
+        -1248,
+        192
       ]
     },
     {
@@ -107,7 +107,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer PLACEHOLDER_GROQ_API_KEY"
+              "value": "Bearer PLACEHOLDER_FOR_API_KEY"
             }
           ]
         },
@@ -132,26 +132,26 @@
         },
         "options": {}
       },
-      "id": "4fe806ff-ee4d-4961-8b2d-c79f4d73868a",
+      "id": "a8ffb359-a39d-4048-8d6a-e0d961915b6b",
       "name": "Transcribe Voice (Groq)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        -448,
-        -160
+        -1072,
+        240
       ]
     },
     {
       "parameters": {
         "jsCode": "// Extract and normalize message content\nconst items = [];\n\nfor (const item of $input.all()) {\n  let messageText = '';\n  let userId = '';\n  let chatId = '';\n  let messageId = '';\n  \n  // Handle different message types - check for body wrapper\n  const message = item.json.body?.message || item.json.message;\n  \n  if (message) {\n    userId = message.from.id;\n    chatId = message.chat.id;\n    messageId = message.message_id;\n    \n    // Text message\n    if (message.text) {\n      messageText = message.text;\n    }\n  }\n  \n  // Handle transcribed voice message from Groq API response\n  if (item.json.text && !messageText) {\n    messageText = item.json.text;\n    // Get user info from the original webhook data if available\n    const webhookData = $('Telegram Webhook').first()?.json;\n    if (webhookData?.body?.message) {\n      userId = webhookData.body.message.from.id;\n      chatId = webhookData.body.message.chat.id;\n      messageId = webhookData.body.message.message_id;\n    }\n  }\n  \n  items.push({\n    json: {\n      messageText: messageText,\n      userId: userId,\n      chatId: chatId,\n      messageId: messageId,\n      timestamp: new Date().toISOString(),\n      originalMessage: item.json\n    }\n  });\n}\n\nreturn items;"
       },
-      "id": "1259a389-b2b5-4a1a-9b64-8b78286878da",
+      "id": "2e58e877-d275-4db2-9168-ea8de9202960",
       "name": "Normalize Message",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -768,
-        96
+        -1392,
+        496
       ]
     },
     {
@@ -167,7 +167,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer PLACEHOLDER_GROQ_API_KEY"
+              "value": "Bearer PLACEHOLDER_FOR_API_KEY"
             }
           ]
         },
@@ -176,13 +176,13 @@
         "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [{\n      \"role\": \"system\",\n      \"content\": \"You are a content classifier for a legal assistant bot. Determine if messages are related to legal/criminal matters.\\n\\nRespond with 'VALID' if the message contains:\\n- Direct legal questions\\n- Criminal scenarios or situations\\n- Descriptions of potential crimes or violations\\n- Court cases, statutes, or legal procedures\\n- Requests for legal advice or analysis\\n- Fact patterns that may involve legal issues\\n- Property damage or destruction scenarios\\n- Domestic disputes or relationship conflicts with legal implications\\n- Theft, assault, harassment, or any criminal behavior\\n- Civil law matters (contracts, torts, property disputes)\\n\\nRespond with 'INVALID: [brief reason]' if the message is clearly unrelated to legal matters (weather, sports, general chat, etc.).\\n\\nExamples of VALID messages:\\n- 'What are Miranda rights?'\\n- 'A wife smashes her husband's phone'\\n- 'Someone took my bike without permission'\\n- 'What happens if I don't pay a traffic ticket?'\\n- 'My neighbor is playing loud music at 2am'\\n- 'Wife smashed my phone'\\n- 'My landlord won't fix the heat'\\n- 'Someone hit my car and drove away'\"\n  }, {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.messageText }}\"\n  }]\n} ",
         "options": {}
       },
-      "id": "93403ddd-4797-43c0-9b96-94ee2ca123c1",
+      "id": "3c368754-7aca-4184-88f8-5591d05a10eb",
       "name": "Validate Content (Groq)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        -544,
-        96
+        -1168,
+        496
       ]
     },
     {
@@ -197,13 +197,13 @@
           ]
         }
       },
-      "id": "74969d44-26c4-4ef0-936a-f6eee1dfadc6",
+      "id": "025c84b1-900f-4dd2-bcf9-52c3e401f54d",
       "name": "Is Valid Request",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
       "position": [
-        -320,
-        96
+        -944,
+        496
       ]
     },
     {
@@ -226,13 +226,13 @@
           ]
         }
       },
-      "id": "0c8a80e9-26f5-491e-8c73-c701669bfe44",
+      "id": "d2613755-e361-433e-ae57-e71ada16ce0f",
       "name": "Log Rejection",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -96,
-        208
+        -592,
+        864
       ],
       "credentials": {
         "supabaseApi": {
@@ -247,13 +247,13 @@
         "text": "=I'm sorry, but I can only assist with legal and criminal matters. Your message appears to be outside my scope of expertise.\n\nReason: {{ $('Validate Content (Groq)').item.json.choices[0].message.content }}\n\nI can help you with:\n• Direct legal questions (\"What are Miranda rights?\")\n• Criminal scenarios (\"Someone took my bike without asking\")\n• Court cases and rulings\n• Legal procedures and statutes\n• Fact patterns involving potential crimes\n• Civil and criminal law analysis",
         "additionalFields": {}
       },
-      "id": "62d86cbc-dbee-4ed5-ab83-41cbb67cd815",
+      "id": "b419aa9e-3a8c-41db-8057-42dd738a2ba7",
       "name": "Send Rejection Response",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        112,
-        208
+        -48,
+        864
       ],
       "webhookId": "bfbe4895-07b0-4a1c-81d8-a6f04db77463",
       "credentials": {
@@ -276,13 +276,13 @@
           ]
         }
       },
-      "id": "d2306728-c696-48c1-8d3f-60ef931296cd",
+      "id": "dc4a3e8c-5b0c-4ce7-b1e3-33d1a1c76bf8",
       "name": "Get Conversation Memory",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        -96,
-        -32
+        0,
+        352
       ],
       "credentials": {
         "supabaseApi": {
@@ -301,13 +301,13 @@
           ]
         }
       },
-      "id": "5fac8418-8900-4884-b238-9cdedcdd35dd",
+      "id": "3e3a6409-9b94-49c8-a5cc-3526e2ff366d",
       "name": "Get Legal Documents",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
         -96,
-        -224
+        560
       ],
       "credentials": {
         "supabaseApi": {
@@ -318,15 +318,76 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prepare context for AI analysis\nconst items = [];\n\nconst normalizedMessage = $('Normalize Message').item.json;\nconst conversationMemory = $('Get Conversation Memory').all();\nconst legalDocs = $('Get Legal Documents').all();\n\n// Build conversation history\nlet conversationHistory = '';\nif (conversationMemory.length > 0 && conversationMemory[0].json.conversation_history) {\n  conversationHistory = conversationMemory[0].json.conversation_history;\n}\n\n// Build document context\nlet documentContext = '';\nif (legalDocs.length > 0) {\n  documentContext = legalDocs.map(doc => {\n    return `Document: ${doc.json.title}\\nType: ${doc.json.type}\\nContent: ${doc.json.content}\\n---`;\n  }).join('\\n');\n}\n\n// Create AI prompt\nconst aiPrompt = `You are a legal AI assistant specializing in criminal law and legal matters. You excel at analyzing both direct legal questions and criminal scenarios/fact patterns.\n\nWhen analyzing scenarios (like \"a wife smashes her husband's phone\"), identify ALL potential legal violations, charges, statutes, and case precedents that could apply. Consider different jurisdictions and varying circumstances.\n\nFor direct legal questions, provide comprehensive explanations with relevant statutes and case law.\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nCURRENT QUESTION/SCENARIO:\n${normalizedMessage.messageText}\n\nLEGAL DOCUMENTS CONTEXT:\n${documentContext}\n\nPlease provide your response in the following format:\n\n**SHORT SUMMARY:**\n[Brief summary of relevant statutes/laws/cases that apply to this scenario]\n\n**DETAILED BREAKDOWN:**\n[For each potential violation/legal issue:\n• Specific statute or law\n• Elements that must be proven\n• How the scenario meets (or doesn't meet) those elements\n• Potential penalties/consequences\n• Relevant case precedents]\n\n**CONCLUSION:**\n[Summary of most likely charges/violations, defenses, and recommended next steps]\n\nFor scenarios, analyze from multiple angles: criminal charges, civil liability, defenses, and jurisdictional variations. Be thorough and consider various interpretations of the facts.`;\n\nitems.push({\n  json: {\n    aiPrompt: aiPrompt,\n    userMessage: normalizedMessage.messageText,\n    userId: normalizedMessage.userId,\n    chatId: normalizedMessage.chatId,\n    conversationHistory: conversationHistory,\n    timestamp: normalizedMessage.timestamp\n  }\n});\n\nreturn items;"
+        "url": "=https://www.courtlistener.com/api/rest/v3/search/?q={{ encodeURIComponent($('Normalize Message').item.json.messageText) }}&type=o&format=json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token PLACEHOLDER_FOR_API_KEY"
+            }
+          ]
+        },
+        "options": {}
       },
-      "id": "da004606-5767-4ebe-818e-3bf478907953",
+      "id": "54eb416c-3371-419d-8a79-9d2c9c6ae4cc",
+      "name": "Search Court Cases",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        0,
+        176
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.case.law/v1/cases/?search={{ encodeURIComponent($('Normalize Message').item.json.messageText) }}&limit=5",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Token PLACEHOLDER_FOR_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5008894c-3b04-48c5-be52-8c212775cb2c",
+      "name": "Search Case Law",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        0,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced vector similarity search for legal documents\nconst items = [];\n\nconst userQuery = $('Normalize Message').item.json.messageText;\nconst legalDocs = $('Get Legal Documents').all();\n\n// Simple keyword-based similarity for now - can be enhanced with embeddings\nfunction calculateSimilarity(query, text) {\n  const queryWords = query.toLowerCase().split(/\\s+/);\n  const textWords = text.toLowerCase().split(/\\s+/);\n  \n  let matches = 0;\n  queryWords.forEach(word => {\n    if (textWords.some(textWord => textWord.includes(word) || word.includes(textWord))) {\n      matches++;\n    }\n  });\n  \n  return matches / queryWords.length;\n}\n\n// Score and rank documents\nconst scoredDocs = legalDocs.map(doc => {\n  const titleScore = calculateSimilarity(userQuery, doc.json.title || '');\n  const contentScore = calculateSimilarity(userQuery, doc.json.content || '');\n  const typeScore = calculateSimilarity(userQuery, doc.json.type || '');\n  \n  return {\n    ...doc.json,\n    relevanceScore: (titleScore * 2 + contentScore + typeScore * 0.5) / 3.5\n  };\n}).filter(doc => doc.relevanceScore > 0.1)\n  .sort((a, b) => b.relevanceScore - a.relevanceScore)\n  .slice(0, 5); // Top 5 most relevant\n\nitems.push({\n  json: {\n    relevantDocuments: scoredDocs,\n    searchQuery: userQuery,\n    totalDocuments: legalDocs.length,\n    relevantCount: scoredDocs.length\n  }\n});\n\nreturn items;"
+      },
+      "id": "633c7181-f16f-4140-9166-735904a500ce",
+      "name": "Vector Document Search",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Focused RAG context preparation for scenario-specific legal analysis\nconst items = [];\n\nconst normalizedMessage = $('Normalize Message').item.json;\nconst conversationMemory = $('Get Conversation Memory').all();\nconst vectorResults = $('Vector Document Search').all();\nconst courtCases = $('Search Court Cases').all();\nconst caseLaw = $('Search Case Law').all();\n\n// Build conversation history\nlet conversationHistory = '';\nif (conversationMemory.length > 0 && conversationMemory[0].json.conversation_history) {\n  conversationHistory = conversationMemory[0].json.conversation_history;\n}\n\n// Build enhanced document context from vector search\nlet documentContext = '';\nif (vectorResults.length > 0 && vectorResults[0].json.relevantDocuments) {\n  documentContext = vectorResults[0].json.relevantDocuments.map(doc => {\n    return `Document: ${doc.title} (Relevance: ${(doc.relevanceScore * 100).toFixed(1)}%)\\nType: ${doc.type}\\nContent: ${doc.content}\\n---`;\n  }).join('\\n');\n}\n\n// Create focused AI prompt for scenario-specific analysis\nconst aiPrompt = `Analyze this SPECIFIC legal scenario and provide ONLY directly relevant charges and laws. Ignore generic legal principles unless they directly apply to this exact situation.\n\nSCENARIO TO ANALYZE:\n${normalizedMessage.messageText}\n\nRELEVANT DOCUMENTS:\n${documentContext}\n\nINSTRUCTIONS:\n- Focus ONLY on charges that directly apply to THIS specific scenario\n- Ignore Miranda rights, general legal advice, or unrelated laws\n- Be extremely concise - maximum 2-3 items per section\n- Use bullet points with specific statute numbers when available\n- If no charges apply, say \"No clear violations identified\"\n\nREQUIRED FORMAT (use exact headers):\nSUMMARY:\n• [Very brief summary on what the scenario or legal request received]\n\nCHARGES:\n• [Only charges that directly apply - include statute numbers]\n• [Maximum 3 charges]\n\nELEMENTS TO PROVE:\n• [Key evidence needed for each charge]\n• [Be specific to the scenario]\n\nPENALTIES:\n• [Specific penalties for identified charges only]\n• [Include fine amounts/jail time if known]\n\nDEFENSES:\n• [Only defenses that apply to THIS scenario]\n• [Maximum 2-3 relevant defenses]\n\nIMPORTANT: Do not include general legal information. Only analyze what directly relates to the specific scenario provided.`;\n\nitems.push({\n  json: {\n    aiPrompt: aiPrompt,\n    userMessage: normalizedMessage.messageText,\n    userId: normalizedMessage.userId,\n    chatId: normalizedMessage.chatId,\n    conversationHistory: conversationHistory,\n    timestamp: normalizedMessage.timestamp,\n    retrievedSources: {\n      documents: vectorResults[0]?.json?.relevantCount || 0,\n      courtCases: courtCases[0]?.json?.count || 0,\n      caseLaw: caseLaw[0]?.json?.count || 0\n    }\n  }\n});\n\nreturn items;"
+      },
+      "id": "d53b6229-9a4b-4727-a97d-1e7702e59439",
       "name": "Prepare AI Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        544,
-        -32
+        704,
+        368
       ]
     },
     {
@@ -342,7 +403,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer PLACEHOLDER_GROQ_API_KEY"
+              "value": "Bearer PLACEHOLDER_FOR_API_KEY"
             }
           ]
         },
@@ -351,26 +412,26 @@
         "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [{\n      \"role\": \"system\",\n      \"content\": \"You are a specialized legal AI assistant with expertise in criminal law and legal matters. Provide comprehensive, accurate legal analysis based on the provided context.\"\n  }, {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.aiPrompt) }}\n  }],\n  \"max_tokens\": 2000,\n  \"temperature\": 0.3\n}",
         "options": {}
       },
-      "id": "59a92892-ed1d-425b-8b59-f998be0eb9bd",
+      "id": "f89f6f49-328c-4f25-af75-bbe35a83058d",
       "name": "AI Legal Analysis (Groq)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        768,
-        -32
+        896,
+        368
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Format AI response and update conversation history\nconst items = [];\n\n// Get AI response from Groq format\nconst aiResponse = $json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content || 'Unable to generate response';\nconst context = $('Prepare AI Context').item.json;\n\n// Update conversation history\nconst newConversationEntry = `User: ${context.userMessage}\\nAssistant: ${aiResponse}\\n---\\n`;\nconst updatedHistory = context.conversationHistory + newConversationEntry;\n\n// Format response for Telegram\nlet formattedResponse = aiResponse\n  .replace(/\\*\\*(.*?)\\*\\*/g, '*$1*')  // Convert ** to * for Telegram\n  .replace(/###/g, '🔸')  // Replace ### with bullet points\n  .replace(/##/g, '📋');  // Replace ## with icons\n\n// Telegram message limit is 4096 characters\nconst MAX_LENGTH = 4000; // Leave some buffer\n\nif (formattedResponse.length > MAX_LENGTH) {\n  // Try to find a good break point (end of sentence, paragraph, or section)\n  let truncateAt = MAX_LENGTH;\n  const breakPoints = ['. ', '\\n\\n', '\\n**', '\\n•'];\n  \n  for (const breakPoint of breakPoints) {\n    const lastBreak = formattedResponse.lastIndexOf(breakPoint, MAX_LENGTH - 100);\n    if (lastBreak > MAX_LENGTH / 2) {\n      truncateAt = lastBreak + breakPoint.length;\n      break;\n    }\n  }\n  \n  formattedResponse = formattedResponse.substring(0, truncateAt) + '\\n\\n📝 *Response truncated due to length. Ask follow-up questions for more details.*';\n}\n\nitems.push({\n  json: {\n    formattedResponse: formattedResponse,\n    userId: context.userId,\n    chatId: context.chatId,\n    updatedConversationHistory: updatedHistory,\n    timestamp: context.timestamp,\n    rawAiResponse: aiResponse\n  }\n});\n\nreturn items;"
+        "jsCode": "// Format AI response with HTML line breaks for Telegram\nconst items = [];\n\n// Get AI response from Groq format\nconst aiResponse = $json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content || 'Unable to generate response';\nconst context = $('Prepare AI Context').item.json;\n\n// Update conversation history\nconst newConversationEntry = `User: ${context.userMessage}\\nAssistant: ${aiResponse}\\n---\\n`;\nconst updatedHistory = context.conversationHistory + newConversationEntry;\n\n// Clean formatting and convert to HTML for Telegram\nlet formattedResponse = aiResponse;\n\n\n\n\n\n\n// Telegram message limit is 4096 characters\nconst MAX_LENGTH = 4000; // Leave some buffer\n\nif (formattedResponse.length > MAX_LENGTH) {\n  // Try to find a good break point\n  let truncateAt = MAX_LENGTH;\n  const breakPoints = ['. ', '\\n', ': '];\n  \n  for (const breakPoint of breakPoints) {\n    const lastBreak = formattedResponse.lastIndexOf(breakPoint, MAX_LENGTH - 100);\n    if (lastBreak > MAX_LENGTH / 2) {\n      truncateAt = lastBreak + breakPoint.length;\n      break;\n    }\n  }\n  \n  formattedResponse = formattedResponse.substring(0, truncateAt);\n}\n\nitems.push({\n  json: {\n    formattedResponse: formattedResponse,\n    userId: context.userId,\n    chatId: context.chatId,\n    updatedConversationHistory: updatedHistory,\n    timestamp: context.timestamp,\n    rawAiResponse: aiResponse\n  }\n});\n\nreturn items;"
       },
-      "id": "2d804c35-6cd2-47a5-8838-95e83da096dd",
+      "id": "24ddc268-5f97-4354-b515-5ed9de6bc02e",
       "name": "Format Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        992,
-        -32
+        1104,
+        368
       ]
     },
     {
@@ -389,13 +450,13 @@
           ]
         }
       },
-      "id": "9c4e9e5e-80e1-4728-8ab6-21d134080d22",
+      "id": "6caf4a9d-f1d6-48fa-989c-7829f32572dd",
       "name": "Update Conversation Memory",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1200,
-        -96
+        1312,
+        304
       ],
       "credentials": {
         "supabaseApi": {
@@ -409,16 +470,16 @@
         "chatId": "={{ $json.chatId }}",
         "text": "={{ $json.formattedResponse }}",
         "additionalFields": {
-          "parse_mode": "Markdown"
+          "parse_mode": "HTML"
         }
       },
-      "id": "a415b2f2-3c27-4219-85e9-abae804d4211",
+      "id": "5eac4ca9-d0ed-41f9-8cb7-4a9bfaffd08b",
       "name": "Send Legal Response",
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        1200,
-        32
+        1312,
+        432
       ],
       "webhookId": "8e9aa2f5-0f18-4398-a116-f2f5984c55a8",
       "credentials": {
@@ -434,25 +495,27 @@
         "responseBody": "={{ { \"status\": \"success\", \"message\": \"Message processed successfully\" } }}",
         "options": {}
       },
-      "id": "3cfe10ff-c922-452d-b731-4babf6fde2e4",
+      "id": "d6426ec1-2452-4438-871a-4150087abca9",
       "name": "Webhook Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        1424,
-        -32
+        1616,
+        576
       ]
     },
     {
-      "parameters": {},
+      "parameters": {
+        "numberInputs": 4
+      },
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        272,
-        -32
+        464,
+        368
       ],
-      "id": "e8d0a9b6-7398-4d62-bd05-c6c75a09d60a",
-      "name": "Merge"
+      "id": "7679dc57-ba80-4873-93d5-c50365223a57",
+      "name": "Merge Legal Data"
     }
   ],
   "pinData": {
@@ -466,7 +529,7 @@
             "cdn-loop": "cloudflare; loops=1",
             "cf-connecting-ip": "91.108.5.76",
             "cf-ipcountry": "NL",
-            "cf-ray": "98caca0c787ce18e-AMS",
+            "cf-ray": "98cb49a1cf28f6ad-AMS",
             "cf-visitor": "{\"scheme\":\"https\"}",
             "cf-warp-tag-id": "301047e0-45cc-4792-9107-e54ecb369660",
             "connection": "keep-alive",
@@ -477,9 +540,9 @@
           "params": {},
           "query": {},
           "body": {
-            "update_id": 383995315,
+            "update_id": 383995329,
             "message": {
-              "message_id": 35,
+              "message_id": 56,
               "from": {
                 "id": 7998792537,
                 "is_bot": false,
@@ -493,13 +556,13 @@
                 "username": "CleverCortex",
                 "type": "private"
               },
-              "date": 1760148292,
+              "date": 1760153518,
               "voice": {
                 "duration": 1,
                 "mime_type": "audio/ogg",
-                "file_id": "AwACAgEAAxkBAAMjaOm7RLGFesHPlDJY9rH-BdDRa5QAAnkFAAL4FVBHiBfIRzR2vw02BA",
-                "file_unique_id": "AgADeQUAAvgVUEc",
-                "file_size": 6342
+                "file_id": "AwACAgEAAxkBAAM4aOnPrjae8n9Qg-7c06BtMLMTSkAAAqwFAAL4FVBHsX-Gkj5Jw-82BA",
+                "file_unique_id": "AgADrAUAAvgVUEc",
+                "file_size": 4603
               }
             }
           },
@@ -614,6 +677,16 @@
             "index": 0
           },
           {
+            "node": "Search Court Cases",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search Case Law",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Get Legal Documents",
             "type": "main",
             "index": 0
@@ -654,9 +727,9 @@
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Merge Legal Data",
             "type": "main",
-            "index": 1
+            "index": 2
           }
         ]
       ]
@@ -665,7 +738,40 @@
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Vector Document Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Court Cases": {
+      "main": [
+        [
+          {
+            "node": "Merge Legal Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Search Case Law": {
+      "main": [
+        [
+          {
+            "node": "Merge Legal Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Legal Data": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Context",
             "type": "main",
             "index": 0
           }
@@ -732,13 +838,13 @@
         ]
       ]
     },
-    "Merge": {
+    "Vector Document Search": {
       "main": [
         [
           {
-            "node": "Prepare AI Context",
+            "node": "Merge Legal Data",
             "type": "main",
-            "index": 0
+            "index": 3
           }
         ]
       ]
