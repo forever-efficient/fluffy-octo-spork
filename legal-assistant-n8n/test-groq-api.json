@@ -1,0 +1,161 @@
+{
+  "name": "Test Groq API",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "test-groq",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-test-groq",
+      "name": "Test Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create test message data\nreturn [{\n  json: {\n    messageText: $json.message || \"What are Miranda rights?\"\n  }\n}];"
+      },
+      "id": "create-test-data",
+      "name": "Create Test Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "headerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $credentials.groqApi.apiKey }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "jsonParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "llama3-8b-8192"
+            },
+            {
+              "name": "messages",
+              "value": [
+                {
+                  "role": "system",
+                  "content": "You are a content classifier. Respond with 'VALID' or 'INVALID: reason'."
+                },
+                {
+                  "role": "user",
+                  "content": "={{ $json.messageText }}"
+                }
+              ]
+            },
+            {
+              "name": "max_tokens",
+              "value": 50
+            },
+            {
+              "name": "temperature",
+              "value": 0.1
+            }
+          ]
+        }
+      },
+      "id": "test-groq-call",
+      "name": "Test Groq Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Debug Groq response structure\nconsole.log('=== GROQ API RESPONSE DEBUG ===');\nconsole.log('Full response:', JSON.stringify($json, null, 2));\n\nlet responseAnalysis = {\n  hasChoices: !!$json.choices,\n  choicesLength: $json.choices ? $json.choices.length : 0,\n  hasError: !!$json.error,\n  errorMessage: $json.error ? $json.error.message : null,\n  status: $json.status || 'unknown',\n  contentValue: null\n};\n\nif ($json.choices && $json.choices[0] && $json.choices[0].message) {\n  responseAnalysis.contentValue = $json.choices[0].message.content;\n  console.log('✅ Valid response structure');\n  console.log('Content:', $json.choices[0].message.content);\n} else {\n  console.log('❌ Invalid response structure');\n  if ($json.error) {\n    console.log('Error:', $json.error.message);\n  }\n}\n\nconsole.log('Analysis:', JSON.stringify(responseAnalysis, null, 2));\n\nreturn [{ \n  json: {\n    originalResponse: $json,\n    analysis: responseAnalysis,\n    testResult: responseAnalysis.contentValue || 'ERROR: No valid response'\n  }\n}];"
+      },
+      "id": "debug-response",
+      "name": "Debug Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-debug",
+      "name": "Respond Debug",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1140, 300]
+    }
+  ],
+  "connections": {
+    "Test Webhook": {
+      "main": [
+        [
+          {
+            "node": "Create Test Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Test Data": {
+      "main": [
+        [
+          {
+            "node": "Test Groq Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Groq Call": {
+      "main": [
+        [
+          {
+            "node": "Debug Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Debug Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Debug",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "groq-test-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "test-groq-api",
+  "tags": []
+}

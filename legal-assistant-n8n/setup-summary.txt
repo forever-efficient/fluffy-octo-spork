@@ -1,0 +1,32 @@
+🏛️ Legal Assistant Bot - Setup Summary
+=====================================
+
+🤖 Telegram Bot: @your_clever_cortex_bot
+📞 Webhook URL: https://n8n.modernwizard.win/webhook/telegram-webhook
+🗄️ Database: https://ioncpiocmpusocereeia.supabase.co
+🧠 AI Provider: Groq (llama3 models)
+
+📋 Credentials Used:
+- Telegram Bot Token: 8025391476:AAH0Q9F2OLQfvm3NUFm2gRxAvVJoD0A-WHk
+- Supabase URL: https://ioncpiocmpusocereeia.supabase.co
+- Supabase Service Key: eyJhbGciOiJIUzI1NiIs...
+- Groq API Key: gsk_klc8XLw3zGU7jc5r...
+
+🔧 Next Steps:
+1. Import legal-assistant-workflow.json into n8n
+2. Configure the 3 credential types
+3. Activate the workflow
+4. Test with legal questions
+
+📚 Documentation:
+- README.md - Full documentation
+- SELF_HOSTED_SETUP.md - Detailed setup guide
+- GROQ_BENEFITS.md - Why we use Groq
+- database-schema.sql - Database setup
+
+🆘 Support:
+- Check n8n execution logs for errors
+- Verify webhook with: curl -X GET "https://api.telegram.org/bot8025391476:AAH0Q9F2OLQfvm3NUFm2gRxAvVJoD0A-WHk/getWebhookInfo"
+- Test APIs with provided curl commands
+
+Setup completed: Fri Oct 10 17:25:05 MDT 2025

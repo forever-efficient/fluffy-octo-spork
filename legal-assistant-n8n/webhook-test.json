@@ -1,0 +1,74 @@
+{
+  "name": "Test Webhook - Simple",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "test-webhook",
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-test",
+      "name": "Webhook Test",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [260, 300],
+      "webhookId": "test-webhook-simple"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simple test to validate webhook data structure\nconsole.log('Test webhook received data:');\nconsole.log('Full JSON:', JSON.stringify($json, null, 2));\n\n// Test for body wrapper\nconst hasBody = !!$json.body;\nconst message = $json.body?.message || $json.message;\nconst text = message?.text;\n\nconsole.log('Has body wrapper:', hasBody);\nconsole.log('Message path:', hasBody ? '$json.body.message' : '$json.message');\nconsole.log('Text content:', text);\n\nreturn [{\n  json: {\n    status: 'success',\n    hasBodyWrapper: hasBody,\n    messagePath: hasBody ? '$json.body.message' : '$json.message',\n    textContent: text || 'no text',\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "test-code",
+      "name": "Test Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond-test",
+      "name": "Respond Test",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [700, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Test": {
+      "main": [
+        [
+          {
+            "node": "Test Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Code": {
+      "main": [
+        [
+          {
+            "node": "Respond Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "test-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "webhook-test-simple",
+  "tags": []
+}

@@ -1,0 +1,666 @@
+{
+  "name": "Legal Assistant Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "b6a73f55-51e4-4f91-b729-c89393fb8fd6",
+      "name": "Telegram Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        192
+      ],
+      "webhookId": "191c5774-e8b2-4e17-8786-e641403e5046"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.message?.text || '' }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "2b6f94d9-096a-4d2d-8a14-8d52dc93001f",
+      "name": "Has Message Content",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body.message?.voice ? 'voice' : 'text' }}",
+              "value2": "voice"
+            }
+          ]
+        }
+      },
+      "id": "34c7ff45-4e9d-4a16-8057-1adcf5fc9ac1",
+      "name": "Is Voice Message",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.body.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "id": "6aaad696-5c55-4179-bb2f-00247eccd884",
+      "name": "Get Voice File",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "ee2240fc-1d1d-41f6-bfa6-1b126b8ceadf",
+      "credentials": {
+        "telegramApi": {
+          "id": "zcv8VyBLDeXHWW3a",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/audio/transcriptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "value": "={{ $json.body.message?.voice?.file_id || $json.message?.voice?.file_id }}"
+            },
+            {
+              "name": "model",
+              "value": "whisper-large-v3"
+            },
+            {
+              "name": "language",
+              "value": "en"
+            },
+            {
+              "name": "response_format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f81d345d-f75c-4590-a779-04edc472d4d7",
+      "name": "Transcribe Voice (Groq)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract and normalize message content\nconst items = [];\n\nfor (const item of $input.all()) {\n  let messageText = '';\n  let userId = '';\n  let chatId = '';\n  let messageId = '';\n  \n  // Handle different message types - check for body wrapper\n  const message = item.json.body?.message || item.json.message;\n  \n  if (message) {\n    userId = message.from.id;\n    chatId = message.chat.id;\n    messageId = message.message_id;\n    \n    // Text message\n    if (message.text) {\n      messageText = message.text;\n    }\n    // Transcribed voice message\n    else if (item.json.text) {\n      messageText = item.json.text;\n    }\n  }\n  \n  items.push({\n    json: {\n      messageText: messageText,\n      userId: userId,\n      chatId: chatId,\n      messageId: messageId,\n      timestamp: new Date().toISOString(),\n      originalMessage: item.json\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "a65a0083-e452-488b-b8ac-df8761451807",
+      "name": "Normalize Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [{\n      \"role\": \"user\",\n      \"content\": \"{{ $json.messageText }}\"\n  }]\n} ",
+        "options": {}
+      },
+      "id": "6932eace-0093-49ab-bf8d-83d1e95f47a2",
+      "name": "Validate Content (Groq)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        224,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.choices && $json.choices[0] && $json.choices[0].message ? $json.choices[0].message.content : 'INVALID: API Error' }}",
+              "operation": "contains",
+              "value2": "VALID"
+            }
+          ]
+        }
+      },
+      "id": "9bb28a72-fdf3-4f29-a31f-e2a6b8601c25",
+      "name": "Is Valid Request",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        448,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "user_conversations",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $('Normalize Message').item.json.userId + Math.floor(Math.random() * 1000) + 1}}"
+            },
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $('Normalize Message').item.json.chatId + Math.floor(Math.random() * 1000) + 1}}"
+            },
+            {
+              "fieldId": "conversation_history",
+              "fieldValue": "={{ $('Normalize Message').item.json.messageText }}"
+            }
+          ]
+        }
+      },
+      "id": "074eb6d4-6b5e-41b3-bea2-e1efac405b3c",
+      "name": "Log Rejection",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        672,
+        304
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "GAXI2okVDAx3Ea8z",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Normalize Message').item.json.chatId }}",
+        "text": "=I'm sorry, but I can only assist with legal and criminal matters. Your message appears to be outside my scope of expertise.\n\nReason: {{ $('Validate Content (Groq)').item.json.choices[0].message.content }}\n\nI can help you with:\n• Direct legal questions (\"What are Miranda rights?\")\n• Criminal scenarios (\"Someone took my bike without asking\")\n• Court cases and rulings\n• Legal procedures and statutes\n• Fact patterns involving potential crimes\n• Civil and criminal law analysis",
+        "additionalFields": {}
+      },
+      "id": "9d2e8415-8bc3-4c2d-81f6-380258661e6c",
+      "name": "Send Rejection Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        880,
+        304
+      ],
+      "webhookId": "bfbe4895-07b0-4a1c-81d8-a6f04db77463",
+      "credentials": {
+        "telegramApi": {
+          "id": "zcv8VyBLDeXHWW3a",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery"
+      },
+      "id": "20c7ccd1-e0bf-4526-b3c2-1c90df9f3402",
+      "name": "Get Conversation Memory",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        672,
+        64
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "GAXI2okVDAx3Ea8z",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery"
+      },
+      "id": "0ac9d461-dbd5-4d78-9636-89059b361d2f",
+      "name": "Get Legal Documents",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        880,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "GAXI2okVDAx3Ea8z",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare context for AI analysis\nconst items = [];\n\nconst normalizedMessage = $('Normalize Message').item.json;\nconst conversationMemory = $('Get Conversation Memory').all();\nconst legalDocs = $('Get Legal Documents').all();\n\n// Build conversation history\nlet conversationHistory = '';\nif (conversationMemory.length > 0 && conversationMemory[0].json.conversation_history) {\n  conversationHistory = conversationMemory[0].json.conversation_history;\n}\n\n// Build document context\nlet documentContext = '';\nif (legalDocs.length > 0) {\n  documentContext = legalDocs.map(doc => {\n    return `Document: ${doc.json.title}\\nType: ${doc.json.type}\\nContent: ${doc.json.content}\\n---`;\n  }).join('\\n');\n}\n\n// Create AI prompt\nconst aiPrompt = `You are a legal AI assistant specializing in criminal law and legal matters. You excel at analyzing both direct legal questions and criminal scenarios/fact patterns.\n\nWhen analyzing scenarios (like \"a wife smashes her husband's phone\"), identify ALL potential legal violations, charges, statutes, and case precedents that could apply. Consider different jurisdictions and varying circumstances.\n\nFor direct legal questions, provide comprehensive explanations with relevant statutes and case law.\n\nCONVERSATION HISTORY:\n${conversationHistory}\n\nCURRENT QUESTION/SCENARIO:\n${normalizedMessage.messageText}\n\nLEGAL DOCUMENTS CONTEXT:\n${documentContext}\n\nPlease provide your response in the following format:\n\n**SHORT SUMMARY:**\n[Brief summary of relevant statutes/laws/cases that apply to this scenario]\n\n**DETAILED BREAKDOWN:**\n[For each potential violation/legal issue:\n• Specific statute or law\n• Elements that must be proven\n• How the scenario meets (or doesn't meet) those elements\n• Potential penalties/consequences\n• Relevant case precedents]\n\n**CONCLUSION:**\n[Summary of most likely charges/violations, defenses, and recommended next steps]\n\nFor scenarios, analyze from multiple angles: criminal charges, civil liability, defenses, and jurisdictional variations. Be thorough and consider various interpretations of the facts.`;\n\nitems.push({\n  json: {\n    aiPrompt: aiPrompt,\n    userMessage: normalizedMessage.messageText,\n    userId: normalizedMessage.userId,\n    chatId: normalizedMessage.chatId,\n    conversationHistory: conversationHistory,\n    timestamp: normalizedMessage.timestamp\n  }\n});\n\nreturn items;"
+      },
+      "id": "f4ba7994-50e9-4fdd-a0ae-e9adb8831c37",
+      "name": "Prepare AI Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama3-70b-8192\",\n  \"messages\": [{\n      \"role\": \"system\",\n      \"content\": \"You are a specialized legal AI assistant with expertise in criminal law and legal matters. Provide comprehensive, accurate legal analysis based on the provided context.\"\n  }, {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($json.aiPrompt) }}\n  }],\n  \"max_tokens\": 2000,\n  \"temperature\": 0.3\n}",
+        "options": {}
+      },
+      "id": "9c88748b-b107-4044-b268-92088420d6a3",
+      "name": "AI Legal Analysis (Groq)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        1328,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format AI response and update conversation history\nconst items = [];\n\n// Get AI response from Groq format\nconst aiResponse = $json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content || 'Unable to generate response';\nconst context = $('Prepare AI Context').item.json;\n\n// Update conversation history\nconst newConversationEntry = `User: ${context.userMessage}\\nAssistant: ${aiResponse}\\n---\\n`;\nconst updatedHistory = context.conversationHistory + newConversationEntry;\n\n// Format response for Telegram\nconst formattedResponse = aiResponse\n  .replace(/\\*\\*(.*?)\\*\\*/g, '*$1*')  // Convert ** to * for Telegram\n  .replace(/###/g, '🔸')  // Replace ### with bullet points\n  .replace(/##/g, '📋');  // Replace ## with icons\n\nitems.push({\n  json: {\n    formattedResponse: formattedResponse,\n    userId: context.userId,\n    chatId: context.chatId,\n    updatedConversationHistory: updatedHistory,\n    timestamp: context.timestamp,\n    rawAiResponse: aiResponse\n  }\n});\n\nreturn items;"
+      },
+      "id": "cdc30660-dee6-4a93-9c12-ae77e440a9fa",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert"
+      },
+      "id": "154d8d29-ffc2-463f-af3f-a9f789ee4e17",
+      "name": "Update Conversation Memory",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        0
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "GAXI2okVDAx3Ea8z",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.formattedResponse }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "3f5b585d-1d5e-4e99-b507-2821c939810c",
+      "name": "Send Legal Response",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        128
+      ],
+      "webhookId": "8e9aa2f5-0f18-4398-a116-f2f5984c55a8",
+      "credentials": {
+        "telegramApi": {
+          "id": "zcv8VyBLDeXHWW3a",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"success\", \"message\": \"Message processed successfully\" } }}",
+        "options": {}
+      },
+      "id": "0c4e44a5-73bd-425e-8f2b-4d995ec11b82",
+      "name": "Webhook Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        64
+      ]
+    }
+  ],
+  "pinData": {
+    "Telegram Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.modernwizard.win",
+            "content-length": "315",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "91.108.5.76",
+            "cf-ipcountry": "NL",
+            "cf-ray": "98ca3c5fc8f2df76-AMS",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-warp-tag-id": "301047e0-45cc-4792-9107-e54ecb369660",
+            "connection": "keep-alive",
+            "content-type": "application/json",
+            "x-forwarded-for": "91.108.5.76",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "update_id": 383995303,
+            "message": {
+              "message_id": 17,
+              "from": {
+                "id": 7998792537,
+                "is_bot": false,
+                "first_name": "CleverCortex",
+                "username": "CleverCortex",
+                "language_code": "en"
+              },
+              "chat": {
+                "id": 7998792537,
+                "first_name": "CleverCortex",
+                "username": "CleverCortex",
+                "type": "private"
+              },
+              "date": 1760142489,
+              "text": "Someone smashed my phone"
+            }
+          },
+          "webhookUrl": "https://n8n.modernwizard.win/webhook/telegram-webhook",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Telegram Webhook": {
+      "main": [
+        [
+          {
+            "node": "Has Message Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Message Content": {
+      "main": [
+        [
+          {
+            "node": "Is Voice Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Voice Message": {
+      "main": [
+        [
+          {
+            "node": "Get Voice File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Normalize Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Voice File": {
+      "main": [
+        [
+          {
+            "node": "Transcribe Voice (Groq)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe Voice (Groq)": {
+      "main": [
+        [
+          {
+            "node": "Normalize Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Message": {
+      "main": [
+        [
+          {
+            "node": "Validate Content (Groq)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Content (Groq)": {
+      "main": [
+        [
+          {
+            "node": "Is Valid Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid Request": {
+      "main": [
+        [
+          {
+            "node": "Get Conversation Memory",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Rejection": {
+      "main": [
+        [
+          {
+            "node": "Send Rejection Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Rejection Response": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Conversation Memory": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Legal Documents": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Context": {
+      "main": [
+        [
+          {
+            "node": "AI Legal Analysis (Groq)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Legal Analysis (Groq)": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Update Conversation Memory",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Legal Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Conversation Memory": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Legal Response": {
+      "main": [
+        [
+          {
+            "node": "Webhook Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "createdAt": "2025-01-10T00:00:00.000Z",
+  "updatedAt": "2025-01-10T00:00:00.000Z",
+  "id": "legal-assistant-workflow"
+}
