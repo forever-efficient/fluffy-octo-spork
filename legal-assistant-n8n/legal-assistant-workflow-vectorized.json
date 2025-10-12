@@ -76,12 +76,8 @@
         -1440,
         240
       ],
-      "webhookId": "ee2240fc-1d1d-41f6-bfa6-1b126b8ceadf",
       "credentials": {
-        "telegramApi": {
-          "id": "zcv8VyBLDeXHWW3a",
-          "name": "Telegram account"
-        }
+        "telegramApi": "PLACEHOLDER_FOR_TELEGRAM_CREDENTIALS"
       }
     },
     {
@@ -106,7 +102,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer PLACEHOLDER_FOR_API_KEY"
+              "value": "Bearer PLACEHOLDER_FOR_GROQ_API_KEY"
             }
           ]
         },
@@ -166,7 +162,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer PLACEHOLDER_FOR_API_KEY"
+              "value": "Bearer PLACEHOLDER_FOR_GROQ_API_KEY"
             }
           ]
         },
@@ -191,7 +187,7 @@
             {
               "value1": "={{ $json.choices && $json.choices[0] && $json.choices[0].message ? $json.choices[0].message.content : 'INVALID: API Error' }}",
               "operation": "contains",
-              "value2": "VALID"
+              "value2": "INVALID"
             }
           ]
         }
@@ -234,10 +230,7 @@
         864
       ],
       "credentials": {
-        "supabaseApi": {
-          "id": "GAXI2okVDAx3Ea8z",
-          "name": "Supabase account"
-        }
+        "supabaseApi": "PLACEHOLDER_FOR_SUPABASE_CREDENTIALS"
       }
     },
     {
@@ -254,12 +247,8 @@
         -48,
         864
       ],
-      "webhookId": "bfbe4895-07b0-4a1c-81d8-a6f04db77463",
       "credentials": {
-        "telegramApi": {
-          "id": "zcv8VyBLDeXHWW3a",
-          "name": "Telegram account"
-        }
+        "telegramApi": "PLACEHOLDER_FOR_TELEGRAM_CREDENTIALS"
       }
     },
     {
@@ -284,10 +273,7 @@
         352
       ],
       "credentials": {
-        "supabaseApi": {
-          "id": "GAXI2okVDAx3Ea8z",
-          "name": "Supabase account"
-        }
+        "supabaseApi": "PLACEHOLDER_FOR_SUPABASE_CREDENTIALS"
       }
     },
     {
@@ -309,10 +295,7 @@
         560
       ],
       "credentials": {
-        "supabaseApi": {
-          "id": "GAXI2okVDAx3Ea8z",
-          "name": "Supabase account"
-        }
+        "supabaseApi": "PLACEHOLDER_FOR_SUPABASE_CREDENTIALS"
       }
     },
     {
@@ -323,7 +306,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Token PLACEHOLDER_FOR_API_KEY"
+              "value": "Token PLACEHOLDER_FOR_COURTLISTENER_API_KEY"
             }
           ]
         },
@@ -347,7 +330,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Token PLACEHOLDER_FOR_API_KEY"
+              "value": "Token PLACEHOLDER_FOR_CASELAW_API_KEY"
             }
           ]
         },
@@ -365,20 +348,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Enhanced vector similarity search for legal documents\nconst items = [];\n\nconst userQuery = $('Normalize Message').item.json.messageText;\nconst legalDocs = $('Get Legal Documents').all();\n\n// Simple keyword-based similarity for now - can be enhanced with embeddings\nfunction calculateSimilarity(query, text) {\n  const queryWords = query.toLowerCase().split(/\\s+/);\n  const textWords = text.toLowerCase().split(/\\s+/);\n  \n  let matches = 0;\n  queryWords.forEach(word => {\n    if (textWords.some(textWord => textWord.includes(word) || word.includes(textWord))) {\n      matches++;\n    }\n  });\n  \n  return matches / queryWords.length;\n}\n\n// Score and rank documents\nconst scoredDocs = legalDocs.map(doc => {\n  const titleScore = calculateSimilarity(userQuery, doc.json.title || '');\n  const contentScore = calculateSimilarity(userQuery, doc.json.content || '');\n  const typeScore = calculateSimilarity(userQuery, doc.json.type || '');\n  \n  return {\n    ...doc.json,\n    relevanceScore: (titleScore * 2 + contentScore + typeScore * 0.5) / 3.5\n  };\n}).filter(doc => doc.relevanceScore > 0.1)\n  .sort((a, b) => b.relevanceScore - a.relevanceScore)\n  .slice(0, 5); // Top 5 most relevant\n\nitems.push({\n  json: {\n    relevantDocuments: scoredDocs,\n    searchQuery: userQuery,\n    totalDocuments: legalDocs.length,\n    relevantCount: scoredDocs.length\n  }\n});\n\nreturn items;"
-      },
-      "id": "633c7181-f16f-4140-9166-735904a500ce",
-      "name": "Vector Document Search",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        112,
-        560
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Focused RAG context preparation for scenario-specific legal analysis\nconst items = [];\n\nconst normalizedMessage = $('Normalize Message').item.json;\nconst conversationMemory = $('Get Conversation Memory').all();\nconst vectorResults = $('Vector Document Search').all();\nconst courtCases = $('Search Court Cases').all();\nconst caseLaw = $('Search Case Law').all();\n\n// Build conversation history\nlet conversationHistory = '';\nif (conversationMemory.length > 0 && conversationMemory[0].json.conversation_history) {\n  conversationHistory = conversationMemory[0].json.conversation_history;\n}\n\n// Build enhanced document context from vector search\nlet documentContext = '';\nif (vectorResults.length > 0 && vectorResults[0].json.relevantDocuments) {\n  documentContext = vectorResults[0].json.relevantDocuments.map(doc => {\n    return `Document: ${doc.title} (Relevance: ${(doc.relevanceScore * 100).toFixed(1)}%)\\nType: ${doc.type}\\nContent: ${doc.content}\\n---`;\n  }).join('\\n');\n}\n\n// Create focused AI prompt for scenario-specific analysis\nconst aiPrompt = `Analyze this SPECIFIC legal scenario and provide ONLY directly relevant charges and laws. Ignore generic legal principles unless they directly apply to this exact situation.\n\nSCENARIO TO ANALYZE:\n${normalizedMessage.messageText}\n\nRELEVANT DOCUMENTS:\n${documentContext}\n\nINSTRUCTIONS:\n- Focus ONLY on charges that directly apply to THIS specific scenario\n- Ignore Miranda rights, general legal advice, or unrelated laws\n- Be extremely concise - maximum 2-3 items per section\n- Use bullet points with specific statute numbers when available\n- If no charges apply, say \"No clear violations identified\"\n\nREQUIRED FORMAT (use exact headers):\nSUMMARY:\n• [Very brief summary on what the scenario or legal request received]\n\nCHARGES:\n• [Only charges that directly apply - include statute numbers]\n• [Maximum 3 charges]\n\nELEMENTS TO PROVE:\n• [Key evidence needed for each charge]\n• [Be specific to the scenario]\n\nPENALTIES:\n• [Specific penalties for identified charges only]\n• [Include fine amounts/jail time if known]\n\nDEFENSES:\n• [Only defenses that apply to THIS scenario]\n• [Maximum 2-3 relevant defenses]\n\nIMPORTANT: Do not include general legal information. Only analyze what directly relates to the specific scenario provided.`;\n\nitems.push({\n  json: {\n    aiPrompt: aiPrompt,\n    userMessage: normalizedMessage.messageText,\n    userId: normalizedMessage.userId,\n    chatId: normalizedMessage.chatId,\n    conversationHistory: conversationHistory,\n    timestamp: normalizedMessage.timestamp,\n    retrievedSources: {\n      documents: vectorResults[0]?.json?.relevantCount || 0,\n      courtCases: courtCases[0]?.json?.count || 0,\n      caseLaw: caseLaw[0]?.json?.count || 0\n    }\n  }\n});\n\nreturn items;"
+        "jsCode": "// Enhanced RAG context preparation with Vector Store integration\nconst items = [];\n\nconst normalizedMessage = $('Normalize Message').item.json;\nconst conversationMemory = $('Get Conversation Memory').all();\nconst vectorResults = $('Legal Documents Vector Search').all();\nconst courtCases = $('Search Court Cases').all();\nconst caseLaw = $('Search Case Law').all();\n\n// Build conversation history\nlet conversationHistory = '';\nif (conversationMemory.length > 0 && conversationMemory[0].json.conversation_history) {\n  conversationHistory = conversationMemory[0].json.conversation_history;\n}\n\n// Build enhanced document context from vector search\nlet documentContext = '';\nif (vectorResults.length > 0) {\n  // Vector Store Question Answer Tool returns text directly\n  const vectorText = vectorResults[0].json.output || vectorResults[0].json.text || '';\n  if (vectorText) {\n    documentContext = `\\nRELEVANT LEGAL DOCUMENTS (Vector Search):\\n${vectorText}\\n---\\n`;\n  }\n}\n\n// Add legacy document support if available\nconst legacyDocs = $('Get Legal Documents').all();\nif (legacyDocs.length > 0) {\n  const legacyContext = legacyDocs.map(doc => {\n    return `Legacy Document: ${doc.json.title || 'Untitled'}\\nType: ${doc.json.type || 'Unknown'}\\nContent: ${doc.json.content || ''}\\n---`;\n  }).join('\\n');\n  documentContext += `\\nLEGACY DOCUMENTS:\\n${legacyContext}\\n`;\n}\n\n// Create enhanced AI prompt for scenario-specific analysis\nconst aiPrompt = `Analyze this SPECIFIC legal scenario using both traditional legal research and modern document retrieval. Provide ONLY directly relevant charges and laws.\n\nSCENARIO TO ANALYZE:\n${normalizedMessage.messageText}\n\n${documentContext}\n\nINSTRUCTIONS:\n- Focus ONLY on charges that directly apply to THIS specific scenario\n- Use information from the retrieved documents when relevant\n- Ignore generic legal advice unless directly applicable\n- Be extremely concise - maximum 2-3 items per section\n- Use bullet points with specific statute numbers when available\n- If no charges apply, say \"No clear violations identified\"\n\nREQUIRED FORMAT (use exact headers):\nSUMMARY:\n• [Very brief summary of the scenario and legal question]\n\nCHARGES:\n• [Only charges that directly apply - include statute numbers]\n• [Maximum 3 charges]\n\nELEMENTS TO PROVE:\n• [Key evidence needed for each charge]\n• [Be specific to the scenario]\n\nPENALTIES:\n• [Specific penalties for identified charges only]\n• [Include fine amounts/jail time if known]\n\nDEFENSES:\n• [Only defenses that apply to THIS scenario]\n• [Maximum 2-3 relevant defenses]\n\nIMPORTANT: Only analyze what directly relates to the specific scenario provided. Use retrieved documents to enhance accuracy.`;\n\nitems.push({\n  json: {\n    aiPrompt: aiPrompt,\n    userMessage: normalizedMessage.messageText,\n    userId: normalizedMessage.userId,\n    chatId: normalizedMessage.chatId,\n    conversationHistory: conversationHistory,\n    timestamp: normalizedMessage.timestamp,\n    retrievedSources: {\n      vectorDocuments: vectorResults.length > 0 ? 1 : 0,\n      legacyDocuments: legacyDocs.length || 0,\n      courtCases: courtCases[0]?.json?.count || 0,\n      caseLaw: caseLaw[0]?.json?.count || 0\n    }\n  }\n});\n\nreturn items;"
       },
       "id": "d53b6229-9a4b-4727-a97d-1e7702e59439",
       "name": "Prepare AI Context",
@@ -402,7 +372,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer PLACEHOLDER_FOR_API_KEY"
+              "value": "Bearer PLACEHOLDER_FOR_GROQ_API_KEY"
             }
           ]
         },
@@ -458,10 +428,7 @@
         304
       ],
       "credentials": {
-        "supabaseApi": {
-          "id": "GAXI2okVDAx3Ea8z",
-          "name": "Supabase account"
-        }
+        "supabaseApi": "PLACEHOLDER_FOR_SUPABASE_CREDENTIALS"
       }
     },
     {
@@ -480,12 +447,8 @@
         1312,
         432
       ],
-      "webhookId": "8e9aa2f5-0f18-4398-a116-f2f5984c55a8",
       "credentials": {
-        "telegramApi": {
-          "id": "zcv8VyBLDeXHWW3a",
-          "name": "Telegram account"
-        }
+        "telegramApi": "PLACEHOLDER_FOR_TELEGRAM_CREDENTIALS"
       }
     },
     {
@@ -515,62 +478,42 @@
       ],
       "id": "7679dc57-ba80-4873-93d5-c50365223a57",
       "name": "Merge Legal Data"
+    },
+    {
+      "id": "vector-store-tool-001",
+      "name": "Legal Documents Vector Search",
+      "type": "@n8n/n8n-nodes-langchain.toolVectorStore",
+      "typeVersion": 1,
+      "position": [
+        112,
+        560
+      ],
+      "parameters": {
+        "name": "legal_documents_search",
+        "description": "Search through legal documents, case law, statutes, and legal precedents to find relevant information for legal analysis and scenario-specific questions"
+      }
+    },
+    {
+      "id": "supabase-vector-store-001",
+      "name": "Supabase Vector Store",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1,
+      "position": [
+        320,
+        560
+      ],
+      "parameters": {
+        "mode": "retrieveDocuments",
+        "options": {
+          "queryName": "match_legal_documents"
+        },
+        "tableName": "legal_documents_vectors"
+      },
+      "credentials": {
+        "supabaseApi": "PLACEHOLDER_FOR_SUPABASE_CREDENTIALS"
+      }
     }
   ],
-  "pinData": {
-    "Telegram Webhook": [
-      {
-        "json": {
-          "headers": {
-            "host": "n8n.modernwizard.win",
-            "content-length": "463",
-            "accept-encoding": "gzip, br",
-            "cdn-loop": "cloudflare; loops=1",
-            "cf-connecting-ip": "91.108.5.76",
-            "cf-ipcountry": "NL",
-            "cf-ray": "98cb49a1cf28f6ad-AMS",
-            "cf-visitor": "{\"scheme\":\"https\"}",
-            "cf-warp-tag-id": "301047e0-45cc-4792-9107-e54ecb369660",
-            "connection": "keep-alive",
-            "content-type": "application/json",
-            "x-forwarded-for": "91.108.5.76",
-            "x-forwarded-proto": "https"
-          },
-          "params": {},
-          "query": {},
-          "body": {
-            "update_id": 383995329,
-            "message": {
-              "message_id": 56,
-              "from": {
-                "id": 7998792537,
-                "is_bot": false,
-                "first_name": "CleverCortex",
-                "username": "CleverCortex",
-                "language_code": "en"
-              },
-              "chat": {
-                "id": 7998792537,
-                "first_name": "CleverCortex",
-                "username": "CleverCortex",
-                "type": "private"
-              },
-              "date": 1760153518,
-              "voice": {
-                "duration": 1,
-                "mime_type": "audio/ogg",
-                "file_id": "AwACAgEAAxkBAAM4aOnPrjae8n9Qg-7c06BtMLMTSkAAAqwFAAL4FVBHsX-Gkj5Jw-82BA",
-                "file_unique_id": "AgADrAUAAvgVUEc",
-                "file_size": 4603
-              }
-            }
-          },
-          "webhookUrl": "https://n8n.modernwizard.win/webhook/telegram-webhook",
-          "executionMode": "production"
-        }
-      }
-    ]
-  },
   "connections": {
     "Telegram Webhook": {
       "main": [
@@ -671,6 +614,18 @@
       "main": [
         [
           {
+            "node": "Log Rejection",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Legal Documents",
+            "type": "main",
+            "index": 0
+          },
+          {
             "node": "Get Conversation Memory",
             "type": "main",
             "index": 0
@@ -682,18 +637,6 @@
           },
           {
             "node": "Search Case Law",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Get Legal Documents",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Log Rejection",
             "type": "main",
             "index": 0
           }
@@ -729,17 +672,6 @@
             "node": "Merge Legal Data",
             "type": "main",
             "index": 2
-          }
-        ]
-      ]
-    },
-    "Get Legal Documents": {
-      "main": [
-        [
-          {
-            "node": "Vector Document Search",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -837,7 +769,27 @@
         ]
       ]
     },
-    "Vector Document Search": {
+    "Get Legal Documents": {
+      "main": [
+        [
+          {
+            "node": "Legal Documents Vector Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Legal Documents Vector Search": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Supabase Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
       "main": [
         [
           {
@@ -849,9 +801,10 @@
       ]
     }
   },
-  "active": true,
-  "settings": {},
-  "createdAt": "2025-01-10T00:00:00.000Z",
-  "updatedAt": "2025-01-10T00:00:00.000Z",
-  "id": "legal-assistant-workflow"
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
 }
