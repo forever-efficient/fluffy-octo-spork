@@ -1,0 +1,278 @@
+{
+  "name": "PDF Legal Document Processor (Fixed)",
+  "nodes": [
+    {
+      "id": "webhook-trigger",
+      "name": "PDF Upload Webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "path": "process-pdf-fixed",
+        "responseMode": "responseNode"
+      },
+      "position": [
+        0,
+        0
+      ],
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1
+    },
+    {
+      "id": "extract-pdf-content",
+      "name": "Extract PDF Text",
+      "parameters": {
+        "binaryPropertyName": "data"
+      },
+      "position": [
+        200,
+        0
+      ],
+      "type": "n8n-nodes-base.readPDF",
+      "typeVersion": 1
+    },
+    {
+      "id": "process-metadata",
+      "name": "Process PDF Metadata",
+      "parameters": {
+        "jsCode": "// Extract metadata from PDF upload and prepare for vector storage\nconst items = [];\n\nfor (const item of $input.all()) {\n  const webhookData = item.json.body || item.json;\n  const fileData = item.binary?.data;\n  const extractedText = item.json.text || item.json.data || '';\n  \n  // Extract metadata from request\n  const metadata = {\n    title: webhookData.title || fileData?.fileName || 'Untitled Document',\n    document_type: webhookData.document_type || 'legal_document',\n    category: webhookData.category || 'general',\n    jurisdiction: webhookData.jurisdiction || 'unknown',\n    date_created: webhookData.date_created || new Date().toISOString().split('T')[0],\n    uploaded_by: webhookData.uploaded_by || 'system',\n    source: webhookData.source || 'manual_upload',\n    tags: webhookData.tags || [],\n    file_size: fileData?.fileSize || 0,\n    file_name: fileData?.fileName || 'unknown.pdf'\n  };\n  \n  // Split text into chunks (simple character-based splitting)\n  const chunkSize = 1000;\n  const overlap = 200;\n  const chunks = [];\n  \n  if (extractedText && extractedText.length > 0) {\n    for (let i = 0; i < extractedText.length; i += chunkSize - overlap) {\n      const chunk = extractedText.slice(i, i + chunkSize);\n      if (chunk.trim().length > 0) {\n        chunks.push({\n          content: chunk.trim(),\n          metadata: {\n            ...metadata,\n            chunk_index: chunks.length,\n            chunk_start: i,\n            chunk_end: Math.min(i + chunkSize, extractedText.length)\n          }\n        });\n      }\n    }\n  }\n  \n  items.push({\n    json: {\n      metadata: metadata,\n      chunks: chunks,\n      extractedText: extractedText,\n      totalChunks: chunks.length\n    }\n  });\n}\n\nreturn items;"
+      },
+      "position": [
+        400,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "split-chunks",
+      "name": "Split Into Individual Chunks",
+      "parameters": {
+        "jsCode": "// Split chunks into individual items for vector storage\nconst items = [];\n\nfor (const item of $input.all()) {\n  const data = item.json;\n  \n  // Create separate item for each chunk\n  data.chunks.forEach((chunk, index) => {\n    items.push({\n      json: {\n        pageContent: chunk.content,\n        metadata: chunk.metadata\n      }\n    });\n  });\n}\n\nreturn items;"
+      },
+      "position": [
+        600,
+        0
+      ],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2
+    },
+    {
+      "id": "generate-embeddings",
+      "name": "Generate Embeddings (OpenAI)",
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/embeddings",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer PLACEHOLDER_FOR_OPENAI_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"text-embedding-ada-002\",\n  \"input\": {{ JSON.stringify($json.pageContent) }}\n}",
+        "options": {}
+      },
+      "position": [
+        800,
+        0
+      ],
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4
+    },
+    {
+      "id": "insert-vector-store",
+      "name": "Insert Into Vector Store",
+      "parameters": {
+        "operation": "insert",
+        "tableId": "legal_documents_vectors",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('Split Into Individual Chunks').item.json.pageContent }}"
+            },
+            {
+              "fieldId": "metadata",
+              "fieldValue": "={{ JSON.stringify($('Split Into Individual Chunks').item.json.metadata) }}"
+            },
+            {
+              "fieldId": "embedding",
+              "fieldValue": "={{ '[' + $json.data[0].embedding.join(',') + ']' }}"
+            }
+          ]
+        }
+      },
+      "position": [
+        1000,
+        0
+      ],
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "credentials": {
+        "supabaseApi": "PLACEHOLDER_FOR_SUPABASE_CREDENTIALS"
+      }
+    },
+    {
+      "id": "log-processing",
+      "name": "Log Processing Result",
+      "parameters": {
+        "operation": "insert",
+        "tableId": "document_processing_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "file_name",
+              "fieldValue": "={{ $('Process PDF Metadata').first().json.metadata.file_name }}"
+            },
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ $('Process PDF Metadata').first().json.metadata.title }}"
+            },
+            {
+              "fieldId": "document_type",
+              "fieldValue": "={{ $('Process PDF Metadata').first().json.metadata.document_type }}"
+            },
+            {
+              "fieldId": "category",
+              "fieldValue": "={{ $('Process PDF Metadata').first().json.metadata.category }}"
+            },
+            {
+              "fieldId": "jurisdiction",
+              "fieldValue": "={{ $('Process PDF Metadata').first().json.metadata.jurisdiction }}"
+            },
+            {
+              "fieldId": "processing_status",
+              "fieldValue": "completed"
+            },
+            {
+              "fieldId": "chunks_created",
+              "fieldValue": "={{ $('Process PDF Metadata').first().json.totalChunks }}"
+            },
+            {
+              "fieldId": "processed_at",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            }
+          ]
+        }
+      },
+      "position": [
+        1200,
+        0
+      ],
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "credentials": {
+        "supabaseApi": "PLACEHOLDER_FOR_SUPABASE_CREDENTIALS"
+      }
+    },
+    {
+      "id": "success-response",
+      "name": "Success Response",
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"message\": \"PDF processed successfully\",\n  \"chunks_created\": {{ $('Process PDF Metadata').first().json.totalChunks }},\n  \"file_name\": {{ JSON.stringify($('Process PDF Metadata').first().json.metadata.file_name) }}\n}"
+      },
+      "position": [
+        1400,
+        0
+      ],
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "PDF Upload Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract PDF Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract PDF Text": {
+      "main": [
+        [
+          {
+            "node": "Process PDF Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process PDF Metadata": {
+      "main": [
+        [
+          {
+            "node": "Split Into Individual Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Into Individual Chunks": {
+      "main": [
+        [
+          {
+            "node": "Generate Embeddings (OpenAI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embeddings (OpenAI)": {
+      "main": [
+        [
+          {
+            "node": "Insert Into Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Into Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Log Processing Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Processing Result": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
