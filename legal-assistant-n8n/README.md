@@ -10,7 +10,9 @@ A comprehensive n8n automation workflow that creates a Telegram bot for legal an
 - ❓ **Direct Legal Questions**: Answers specific legal questions (e.g., "What are Miranda rights?")
 - 🧠 **AI Legal Analysis**: Uses free AI models for comprehensive legal reasoning
 - 📚 **Document Access**: Integrates with legal PDFs and external APIs
-- 💾 **Conversation Memory**: Maintains context for follow-up questions
+- � **Vector Search**: Advanced semantic search through legal documents using HuggingFace embeddings
+- 🎯 **RAG Integration**: Retrieval-Augmented Generation for context-aware legal responses
+- �💾 **Conversation Memory**: Maintains context for follow-up questions
 - 📊 **Database Logging**: Tracks rejected requests and conversation history
 - 🔒 **Security**: Rate limiting and user management
 
@@ -19,9 +21,15 @@ A comprehensive n8n automation workflow that creates a Telegram bot for legal an
 ```
 Telegram Message → Content Validation → AI Analysis → Response Formatting → Database Logging
                 ↓                   ↓              ↓                    ↓
-            Voice-to-Text      Legal Document   Conversation      Rejection
-                              Retrieval        Memory Update      Logging
+            Voice-to-Text      Vector Search +  Conversation      Rejection
+                              Legal Document   Memory Update      Logging
+                              Retrieval (RAG)
 ```
+
+**Vector Search Pipeline:**
+- **HuggingFace Embeddings**: BAAI/bge-small-en-v1.5 (384-dimensional)
+- **Semantic Similarity**: Cosine distance matching with configurable thresholds
+- **Document Chunking**: Optimized text chunks for better retrieval accuracy
 
 ## Quick Start
 
@@ -66,7 +74,16 @@ If you need to set up n8n from scratch:
 
 1. Create a new Supabase project
 2. Run the SQL from `database-schema.sql` in the Supabase SQL editor
-3. Note your project URL and service role key
+3. **NEW**: Enable pgvector extension for vector search:
+   ```sql
+   CREATE EXTENSION IF NOT EXISTS vector;
+   ```
+4. Run `vector-database-schema-384.sql` for vector search tables
+5. Run `vector-search-function-384.sql` for similarity search function
+6. Note your project URL and service role key
+
+**Vector Database Migration:**
+If migrating from OpenAI embeddings (1536-dim) to HuggingFace (384-dim), run `migration-script-384.sql`
 
 ### 3. Import Workflow
 
@@ -87,6 +104,11 @@ Set up these credential types in your n8n instance:
 - Credential Type: `Supabase`
 - Host: `https://your-project.supabase.co`
 - Service Role Secret: `your_supabase_service_role_key`
+
+#### **HuggingFace API (Vector Search):**
+- Credential Type: `HTTP Bearer Auth`
+- Token: `your_huggingface_api_token`
+- Model: `BAAI/bge-small-en-v1.5` (384-dimensional embeddings)
 
 #### **Groq API:**
 - Credential Type: `HTTP Header Auth` or `Generic Credential`
@@ -125,8 +147,9 @@ curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
 - **Topic Classification**: Uses Groq models for fast classification
 
 ### 3. AI Processing
-- **Context Preparation**: Combines message, history, and legal documents
-- **Legal Analysis**: AI-powered analysis using legal knowledge base
+- **Vector Search**: HuggingFace embeddings for semantic document retrieval
+- **Context Preparation**: Combines message, history, and vector-searched legal documents
+- **Legal Analysis**: AI-powered analysis using legal knowledge base + RAG
 - **Response Formatting**: Structures output (Summary + Breakdown + Conclusion)
 
 ### 4. Memory Management
@@ -146,21 +169,29 @@ curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
 1. **rejected_requests**: Logs invalid messages
 2. **user_conversations**: Stores conversation history
 3. **legal_documents**: Legal PDFs and document content
-4. **legal_apis**: External API configurations
+4. **legal_documents_vectors**: Vector embeddings for semantic search (384-dim)
+5. **legal_apis**: External API configurations
 
 ### Key Features
 
 - Row Level Security (RLS) enabled
-- Optimized indexes for performance
+- Optimized indexes for performance (including HNSW vector indexes)
 - JSONB fields for flexible metadata
 - Service role access for n8n
+- **Vector Search**: pgvector extension with 384-dimensional embeddings
+- **Semantic Similarity**: Cosine distance matching for document retrieval
 
 ## Free AI Models Configuration
 
 ### Groq (Primary - Recommended)
-- **Classification**: `llama3-8b-8192` (fast, accurate)
-- **Analysis**: `llama3-70b-8192` (comprehensive legal analysis)
+- **Classification**: `llama-3.3-70b-versatile` (fast, accurate content validation)
+- **Analysis**: `llama-3.3-70b-versatile` (comprehensive legal analysis)
 - **Voice**: `whisper-large-v3` (best transcription quality)
+
+### HuggingFace (Vector Search)
+- **Embeddings**: `BAAI/bge-small-en-v1.5` (384-dimensional semantic embeddings)
+- **Free Tier**: Generous limits for embedding generation
+- **Performance**: Fast and accurate for legal document retrieval
 
 ### Alternative Free Options
 - **OpenAI**: GPT-3.5-turbo and Whisper (limited free tier)
@@ -170,9 +201,10 @@ curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
 ## Legal Document Management
 
 ### Supported Formats
-- PDF documents (stored in Supabase Storage)
+- PDF documents (stored in Supabase Storage with vector embeddings)
 - Structured text content in database
 - External API integrations
+- **Vector chunks**: Optimized document segmentation for semantic search
 
 ### Document Types
 - Constitutional amendments
@@ -184,6 +216,49 @@ curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
 - **Free Law Project**: Court opinions and statutes
 - **Open States**: State legislature information
 - **Justia**: Legal resources and cases
+
+## Vector Search Implementation
+
+### Architecture
+The bot uses **HuggingFace BAAI/bge-small-en-v1.5** for generating 384-dimensional embeddings of legal queries and documents. This enables semantic search through the legal document database using cosine similarity.
+
+### Key Components
+- **Embedding Generation**: Real-time query embedding via HuggingFace API
+- **Document Processing**: PDF documents chunked and embedded using `process-pdfs-from-storage.py`
+- **Similarity Search**: PostgreSQL with pgvector extension for efficient vector operations
+- **RAG Integration**: Retrieved documents enhance AI responses with relevant context
+
+### Database Schema
+```sql
+-- Vector table for 384-dimensional embeddings
+CREATE TABLE legal_documents_vectors (
+    id BIGSERIAL PRIMARY KEY,
+    document_id UUID REFERENCES legal_documents(id),
+    chunk_text TEXT NOT NULL,
+    embedding vector(384) NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    metadata JSONB DEFAULT '{}'
+);
+
+-- Similarity search function
+CREATE FUNCTION match_legal_documents(
+    query_embedding vector(384),
+    match_threshold float DEFAULT 0.3,
+    match_count int DEFAULT 5
+) RETURNS TABLE (...)
+```
+
+### Performance Optimizations
+- **HNSW Indexes**: Approximate nearest neighbor search for fast retrieval
+- **Chunked Processing**: Documents split into optimal-sized segments
+- **Configurable Thresholds**: Similarity matching tuned for legal content
+- **Batch Processing**: Efficient embedding generation for document ingestion
+
+### Migration Support
+If migrating from OpenAI embeddings (1536-dim) to HuggingFace (384-dim):
+1. Run `migration-script-384.sql` to update schema
+2. Re-process documents with `process-pdfs-from-storage.py`
+3. Update workflow to use new embedding model
 
 ## Response Format
 
@@ -310,8 +385,20 @@ Your legal assistant bot handles both **direct legal questions** and **criminal 
 
 ## Roadmap
 
+- [x] **Vector Search**: Semantic document retrieval with HuggingFace embeddings
+- [x] **RAG Integration**: Context-aware responses using retrieved documents
+- [x] **Advanced PDF Processing**: Document chunking and embedding pipeline
 - [ ] Multi-language support
 - [ ] Advanced legal research capabilities
 - [ ] Integration with more legal APIs
 - [ ] Mobile app interface
 - [ ] Advanced analytics dashboard
+
+## Recent Updates
+
+### Vector Search Enhancement (Latest)
+- **Upgraded to HuggingFace embeddings** (BAAI/bge-small-en-v1.5)
+- **384-dimensional vectors** for optimized performance
+- **Improved semantic search** with configurable similarity thresholds
+- **Database migration tools** for easy schema updates
+- **Enhanced RAG pipeline** for better legal context retrieval
