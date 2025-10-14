@@ -1,8 +1,5 @@
 {
-  "id": "AdX8utsuSqpmu5Lj",
   "name": "Legal Assistant Bot",
-  "active": true,
-  "isArchived": false,
   "nodes": [
     {
       "parameters": {
@@ -110,7 +107,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_GROQ_API_KEY"
+              "value": "Bearer YOUR_GROQ_API_KEY_HERE"
             }
           ]
         },
@@ -170,7 +167,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_GROQ_API_KEY"
+              "value": "Bearer YOUR_GROQ_API_KEY_HERE"
             }
           ]
         },
@@ -233,7 +230,7 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        96,
+        512,
         960
       ],
       "credentials": {
@@ -254,7 +251,7 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        352,
+        768,
         960
       ],
       "webhookId": "69b01ef0-fb89-4362-8090-8a666c12a2bc",
@@ -283,8 +280,8 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        176,
-        240
+        480,
+        448
       ],
       "credentials": {
         "supabaseApi": {
@@ -295,40 +292,15 @@
     },
     {
       "parameters": {
-        "operation": "get",
-        "tableId": "legal_documents",
-        "filters": {
-          "conditions": [
-            {}
-          ]
-        }
-      },
-      "id": "8a944e7b-3493-424d-abfb-445e38ab9af4",
-      "name": "Get Legal Documents",
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        160,
-        672
-      ],
-      "credentials": {
-        "supabaseApi": {
-          "id": "GAXI2okVDAx3Ea8z",
-          "name": "Supabase account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Enhanced RAG context preparation with ALL legal data sources\nconst items = [];\n\nconst normalizedMessage = $('Normalize Message').item.json;\nconst conversationMemory = $('Get Conversation Memory').all();\nconst vectorSearchResults = $('Vector Search HTTP Request').all();\nconst legalDocuments = $('Get Legal Documents').all();\nconst findlawResults = $('Search FindLaw Database').all();\nconst cornellResults = $('Search Cornell Law').all();\nconst scholarResults = $('Search Google Scholar Legal').all();\nconst justiaResults = $('Search Justia Legal Database').all();\n\n// Build conversation history\nlet conversationHistory = '';\nif (conversationMemory.length > 0 && conversationMemory[0].json.conversation_history) {\n  conversationHistory = conversationMemory[0].json.conversation_history;\n}\n\n// Build enhanced document context from vector search\nlet documentContext = '';\n\n// Add vector search results from PDFs\nif (vectorSearchResults.length > 0 && vectorSearchResults[0].json) {\n  const vectorData = vectorSearchResults[0].json;\n  documentContext += '\\nVECTOR SEARCH RESULTS (PDF Documents):\\n';\n  \n  // Handle different possible response formats from Supabase function\n  if (Array.isArray(vectorData)) {\n    vectorData.forEach((doc, index) => {\n      if (doc.content || doc.text || doc.document || doc.chunk_text) {\n        const text = doc.content || doc.text || doc.document || doc.chunk_text;\n        const similarity = doc.similarity ? ` (${(doc.similarity * 100).toFixed(1)}% match)` : '';\n        documentContext += `${index + 1}. ${text}${similarity}\\n---\\n`;\n      }\n    });\n  } else if (vectorData.data && Array.isArray(vectorData.data)) {\n    vectorData.data.forEach((doc, index) => {\n      if (doc.content || doc.text || doc.document || doc.chunk_text) {\n        const text = doc.content || doc.text || doc.document || doc.chunk_text;\n        const similarity = doc.similarity ? ` (${(doc.similarity * 100).toFixed(1)}% match)` : '';\n        documentContext += `${index + 1}. ${text}${similarity}\\n---\\n`;\n      }\n    });\n  }\n}\n\n// Add traditional legal documents from table\nif (legalDocuments.length > 0) {\n  documentContext += '\\nLEGAL DOCUMENTS (Database):\\n';\n  legalDocuments.slice(0, 3).forEach((doc, index) => {\n    if (doc.json.content || doc.json.text) {\n      const text = doc.json.content || doc.json.text;\n      documentContext += `${index + 1}. ${doc.json.title || 'Legal Document'}: ${text.substring(0, 500)}...\\n---\\n`;\n    }\n  });\n}\n\n// Create enhanced AI prompt for scenario-specific analysis\nconst aiPrompt = `Analyze this SPECIFIC legal scenario using comprehensive legal research from multiple sources. Provide ONLY directly relevant charges and laws.\n\nSCENARIO TO ANALYZE:\n${normalizedMessage.messageText}\n\n${documentContext}\n\nINSTRUCTIONS:\n- Focus ONLY on charges that directly apply to THIS specific scenario\n- Use information from the retrieved documents and legal databases when relevant\n- Ignore generic legal advice unless directly applicable\n- Be extremely concise - maximum 2-3 items per section\n- Use bullet points with specific statute numbers when available\n- If no charges apply, say \"No clear violations identified\"\n\nREQUIRED FORMAT (use exact headers):\nSUMMARY:\n• [Very brief summary of the scenario and legal question]\n\nCHARGES:\n• [Only charges that directly apply - include statute numbers]\n• [Maximum 3 charges]\n\nELEMENTS TO PROVE:\n• [Key evidence needed for each charge]\n• [Be specific to the scenario]\n\nPENALTIES:\n• [Specific penalties for identified charges only]\n• [Include fine amounts/jail time if known]\n\nDEFENSES:\n• [Only defenses that apply to THIS scenario]\n• [Maximum 2-3 relevant defenses]\n\nIMPORTANT: Only analyze what directly relates to the specific scenario provided. Use all available legal research sources to enhance accuracy.`;\n\nitems.push({\n  json: {\n    aiPrompt: aiPrompt,\n    userMessage: normalizedMessage.messageText,\n    userId: normalizedMessage.userId,\n    chatId: normalizedMessage.chatId,\n    conversationHistory: conversationHistory,\n    timestamp: normalizedMessage.timestamp,\n    retrievedSources: {\n      vectorDocuments: vectorSearchResults.length || 0,\n      legalDocuments: legalDocuments.length || 0,\n      findlawResults: findlawResults.length || 0,\n      cornellResults: cornellResults.length || 0,\n      scholarResults: scholarResults.length || 0,\n      justiaResults: justiaResults.length || 0\n    }\n  }\n});\n\nreturn items;"
+        "jsCode": "// Prepare AI Context - Process all inputs and create comprehensive AI prompt\nconsole.log('=== PREPARE AI CONTEXT PROCESSING ===');\nconsole.log('Input items count:', $input.all().length);\n\n// Extract user data from Normalize Message node\nlet userQuery = $('Normalize Message').item.json.messageText || '';\nlet userId = $('Normalize Message').item.json.userId || null;\nlet chatId = $('Normalize Message').item.json.chatId || null;\nlet messageId = $('Normalize Message').item.json.messageId || null;\n\n// Extract conversation history from Get Conversation Memory node\nlet conversationHistory = '';\nfor (const item of $input.all()) {\n  if (item.json.conversation_history) {\n    conversationHistory = item.json.conversation_history;\n    console.log('Found conversation history:', conversationHistory.substring(0, 100));\n    break;\n  }\n}\n\n// Extract legal documents from Get Legal Documents node\nlet legalDocs = '';\nfor (const item of $input.all()) {\n  if (item.json.title && item.json.content) {\n    legalDocs += `[${item.json.type || 'Document'}] ${item.json.title}: ${item.json.content.substring(0, 500)}...\\n\\n`;\n  }\n}\n\n// Extract vector search results\nlet vectorResults = '';\nfor (const item of $input.all()) {\n  if (item.json.similarity && item.json.content) {\n    vectorResults += `[Vector Match ${item.json.similarity}] ${item.json.title || 'Document'}: ${item.json.content.substring(0, 300)}...\\n\\n`;\n  }\n}\n\n// *** NEW: Extract Court Listener case law results ***\nlet courtListenerResults = '';\nfor (const item of $input.all()) {\n  if (item.json.results && Array.isArray(item.json.results)) {\n    console.log('Found Justia results:', item.json.results.length);\n    for (const caseResult of item.json.results.slice(0, 5)) {\n      if (caseResult.caseName && caseResult.snippet) {\n        const citation = Array.isArray(caseResult.citation) ? caseResult.citation.join(', ') : (caseResult.citation || 'No citation');\n        const cleanSnippet = caseResult.snippet.replace(/<mark>/g, '**').replace(/<\\/mark>/g, '**');\n        courtListenerResults += `[Case Law] ${caseResult.caseName} (${citation}): ${cleanSnippet.substring(0, 300)}...\\n\\n`;\n      }\n    }\n    break; // Only process first Court Listener result set\n  }\n}\n\n// Extract web search results from API nodes\nlet webSearchResults = '';\nfor (const item of $input.all()) {\n  if (item.json.statusCode === 200 && item.json.body) {\n    const searchSource = item.json.url ? new URL(item.json.url).hostname : 'Web Search';\n    webSearchResults += `[${searchSource}] Search results available\\n`;\n  }\n}\n\n// Enhanced semantic reasoning AI prompt\nconst aiPrompt = `You are a legal research assistant. Analyze the user scenario and provide relevant legal authorities in the exact structured format below.\n\nUSER SCENARIO: \"${userQuery}\"\n\n${vectorResults ? `RELEVANT LEGAL DOCUMENTS FROM RAG SEARCH:\\n${vectorResults}` : ''}\n${courtListenerResults ? `RELEVANT CASE LAW FROM SUPREME COURT:\\n${courtListenerResults}` : ''}\n${legalDocs ? `AVAILABLE LEGAL AUTHORITIES:\\n${legalDocs}` : ''}\n\nANALYSIS INSTRUCTIONS:\n1. Analyze the user scenario to identify potential legal issues (e.g., \"wife smashes phone\" = property destruction + domestic violence)\n2. Extract the EXACT statute numbers (like CRS 18-4-205) and titles from the vector search results and match them to the user scenario\n3. CRITICAL: Extract and cite the EXACT Colorado Revised Statute (CRS) numbers and titles from the vector search results above. Look for patterns like \"18-4-205\", \"section 18-4-602\", etc. Do NOT use generic terms - use the actual statute citations found in the retrieved legal documents.\n4. Include relevant Supreme Court case law and federal precedents from the case law results above.\n5. Use this EXACT format for your response:\n\nRELEVANT LEGAL AUTHORITIES:\n\n📋 CASE LAW:\n• [Case Name] = [How it applies to this specific scenario]\n\n📜 STATUTES/LAWS:\n• [EXACT CRS NUMBER AND TITLE from documents] = [How it applies to this specific scenario]\n\n⚖️ CHARGES/PENALTIES:\n• [Charge Name] = [Likelihood and severity for this scenario]\n• [Penalty] = [Potential consequences for this scenario]\n\n6. Only include items that are DIRECTLY relevant to the user's scenario\n7. Do NOT write paragraphs - use the bullet point format\n8. Connect the legal authorities to the specific facts in the scenario\n9. If the scenario involves multiple legal issues, address each one\n10. Include additional bullet points for additional findings.\n\nIf no relevant legal authorities are found in the provided documents, respond with:\n❌ NO RELEVANT LEGAL AUTHORITIES FOUND - The scenario may involve legal issues not covered in the current database.\n\nFocus on making connections between the user's scenario and the legal principles, not just listing generic laws.`;\n\n// Single output object with all processed data\nconst result = {\n  aiPrompt: aiPrompt,\n  userMessage: userQuery,\n  userId: userId,\n  chatId: chatId,\n  messageId: messageId,\n  conversationHistory: conversationHistory,\n  timestamp: new Date().toISOString()\n};\n\nconsole.log('=== RETURNING SINGLE ITEM ===');\nconsole.log('User query:', userQuery);\nconsole.log('Legal docs length:', legalDocs.length);\nconsole.log('Vector results length:', vectorResults.length);\nconsole.log('Justia results length:', courtListenerResults.length);\n\n// Return exactly ONE item\nreturn { json: result };"
       },
       "id": "05a36545-4ef9-4539-838a-2689636d4ef2",
       "name": "Prepare AI Context",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
-        336
+        1440,
+        80
       ]
     },
     {
@@ -344,7 +316,7 @@
             },
             {
               "name": "Authorization",
-              "value": "Bearer YOUR_GROQ_API_KEY"
+              "value": "Bearer YOUR_GROQ_API_KEY_HERE"
             }
           ]
         },
@@ -358,21 +330,21 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        1312,
-        336
+        1664,
+        80
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Format AI response with HTML line breaks for Telegram\nconst items = [];\n\n// Get AI response from Groq format\nconst aiResponse = $json.choices && $json.choices[0] && $json.choices[0].message && $json.choices[0].message.content || 'Unable to generate response';\nconst context = $('Prepare AI Context').item.json;\n\n// Update conversation history\nconst newConversationEntry = `User: ${context.userMessage}\\nAssistant: ${aiResponse}\\n---\\n`;\nconst updatedHistory = context.conversationHistory + newConversationEntry;\n\n// Clean formatting and convert to HTML for Telegram\nlet formattedResponse = aiResponse;\n\n\n\n\n\n\n// Telegram message limit is 4096 characters\nconst MAX_LENGTH = 4000; // Leave some buffer\n\nif (formattedResponse.length > MAX_LENGTH) {\n  // Try to find a good break point\n  let truncateAt = MAX_LENGTH;\n  const breakPoints = ['. ', '\\n', ': '];\n  \n  for (const breakPoint of breakPoints) {\n    const lastBreak = formattedResponse.lastIndexOf(breakPoint, MAX_LENGTH - 100);\n    if (lastBreak > MAX_LENGTH / 2) {\n      truncateAt = lastBreak + breakPoint.length;\n      break;\n    }\n  }\n  \n  formattedResponse = formattedResponse.substring(0, truncateAt);\n}\n\nitems.push({\n  json: {\n    formattedResponse: formattedResponse,\n    userId: context.userId,\n    chatId: context.chatId,\n    updatedConversationHistory: updatedHistory,\n    timestamp: context.timestamp,\n    rawAiResponse: aiResponse\n  }\n});\n\nreturn items;"
+        "jsCode": "// Format AI response with HTML line breaks for Telegram\n// FIXED: Only process the first item to prevent duplicates\nconst items = [];\n\n// Get AI response from Groq format - ONLY process first item\nconst firstInput = $input.first();\nif (!firstInput) {\n  return [];\n}\n\nconst aiResponse = firstInput.json.choices && firstInput.json.choices[0] && firstInput.json.choices[0].message && firstInput.json.choices[0].message.content || 'Unable to generate response';\n\n// Get the context data from Prepare AI Context node - THIS IS THE FIX!\nconst context = $('Prepare AI Context').first().json;\n\n// Update conversation history\nconst newConversationEntry = `User: ${context.userMessage || 'Unknown query'}\\nAssistant: ${aiResponse}\\n---\\n`;\nconst updatedHistory = (context.conversationHistory || '') + newConversationEntry;\n\n// Clean formatting and convert to HTML for Telegram\nlet formattedResponse = aiResponse;\n\n// Telegram message limit is 4096 characters\nconst MAX_LENGTH = 4000; // Leave some buffer\n\nif (formattedResponse.length > MAX_LENGTH) {\n  // Try to find a good break point\n  let truncateAt = MAX_LENGTH;\n  const breakPoints = ['. ', '\\n', ': '];\n  \n  for (const breakPoint of breakPoints) {\n    const lastBreak = formattedResponse.lastIndexOf(breakPoint, MAX_LENGTH - 100);\n    if (lastBreak > MAX_LENGTH / 2) {\n      truncateAt = lastBreak + breakPoint.length;\n      break;\n    }\n  }\n  \n  formattedResponse = formattedResponse.substring(0, truncateAt);\n}\n\nconsole.log('Format Response: Processing single item to prevent duplicates');\n\n// Return only ONE item\nitems.push({\n  json: {\n    formattedResponse: formattedResponse,\n    // USE PRESERVED USER DATA - This is the fix!\n    userId: context.userId,\n    chatId: context.chatId,\n    messageId: context.messageId,\n    updatedConversationHistory: updatedHistory,\n    timestamp: context.timestamp,\n    rawAiResponse: aiResponse\n  }\n});\n\nreturn items;"
       },
       "id": "447a72e5-53bb-453c-99c6-71ddb5e77b74",
       "name": "Format Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1520,
-        336
+        1872,
+        80
       ]
     },
     {
@@ -382,7 +354,7 @@
           "fieldValues": [
             {
               "fieldId": "user_id",
-              "fieldValue": "={{ $json.userId }}"
+              "fieldValue": "={{ $('Normalize Message').last().json.userId }}"
             },
             {
               "fieldId": "chat_id",
@@ -396,8 +368,8 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        1728,
-        272
+        2112,
+        80
       ],
       "credentials": {
         "supabaseApi": {
@@ -408,8 +380,8 @@
     },
     {
       "parameters": {
-        "chatId": "={{ $json.chatId }}",
-        "text": "={{ $json.formattedResponse }}",
+        "chatId": "={{ $('Format Response').item.json.userId }}",
+        "text": "={{ $('Format Response').item.json.formattedResponse }}",
         "additionalFields": {
           "parse_mode": "HTML"
         }
@@ -419,8 +391,8 @@
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
       "position": [
-        1728,
-        400
+        2400,
+        80
       ],
       "webhookId": "0c42ae07-bca7-4767-8279-c91b56cab3dd",
       "credentials": {
@@ -441,8 +413,8 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        2032,
-        544
+        2640,
+        528
       ]
     },
     {
@@ -470,8 +442,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        -96,
-        464
+        272,
+        256
       ],
       "credentials": {
         "httpBearerAuth": {
@@ -483,7 +455,7 @@
     },
     {
       "parameters": {
-        "url": "=https://caselaw.findlaw.com/search.html?query={{ encodeURIComponent($('Normalize Message').item.json.messageText) }}",
+        "url": "=https://caselaw.findlaw.com/search.html?query={{ encodeURIComponent($('Legal Term Interpreter (Groq)').item.json.choices[0].message.content) }}",
         "options": {}
       },
       "id": "search-findlaw-node",
@@ -491,14 +463,14 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        176,
+        432,
         48
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "url": "=https://www.law.cornell.edu/search/site?query={{ encodeURIComponent($('Normalize Message').item.json.messageText) }}",
+        "url": "=https://www.law.cornell.edu/search/site?query={{ encodeURIComponent($('Legal Term Interpreter (Groq)').item.json.choices[0].message.content) }}",
         "options": {}
       },
       "id": "search-cornell-node",
@@ -506,14 +478,14 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        176,
+        432,
         -128
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "url": "=https://scholar.google.com/scholar?q={{ encodeURIComponent($('Normalize Message').item.json.messageText) }}+law+case&hl=en&as_sdt=6",
+        "url": "=https://scholar.google.com/scholar?q={{ encodeURIComponent($('Legal Term Interpreter (Groq)').item.json.choices[0].message.content) }}+law+case&hl=en&as_sdt=6",
         "options": {}
       },
       "id": "search-scholar-node",
@@ -521,43 +493,15 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        176,
+        432,
         -304
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "url": "=https://law.justia.com/search?q={{ encodeURIComponent($('Normalize Message').item.json.messageText) }}&cx=004471346504245195276%3A-zdoitzmfos",
-        "options": {}
-      },
-      "id": "search-justia-node",
-      "name": "Search Justia Legal Database",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4,
-      "position": [
-        176,
-        -480
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "numberInputs": 7
-      },
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [
-        880,
-        272
-      ],
-      "id": "ec25fdf1-573d-4265-97e6-a32f311f602a",
-      "name": "Merge"
-    },
-    {
-      "parameters": {
         "method": "POST",
-        "url": "https://YOUR_SUPABASE_PROJECT.supabase.co/rest/v1/rpc/match_legal_documents",
+        "url": "https://ioncpiocmpusocereeia.supabase.co/rest/v1/rpc/match_legal_documents",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
         "sendHeaders": true,
@@ -569,7 +513,7 @@
             },
             {
               "name": "apikey",
-              "value": "YOUR_SUPABASE_SERVICE_ROLE_KEY"
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvbmNwaW9jbXB1c29jZXJlZWlhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDA5Mzc2NiwiZXhwIjoyMDc1NjY5NzY2fQ.eLkYThE01N7JDbNGx1x9B2ja17jNE-dPj7Qxj_NLvtY"
             }
           ]
         },
@@ -583,9 +527,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
       "position": [
-        352,
-        448
+        672,
+        256
       ],
+      "alwaysOutputData": true,
       "credentials": {
         "httpHeaderAuth": {
           "id": "PjauxqUSAtZQPsh1",
@@ -606,11 +551,194 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        128,
-        480
+        480,
+        256
       ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "legal_documents",
+        "matchType": "allFilters"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        480,
+        656
+      ],
+      "id": "1ecd0351-df3b-461d-9bc6-332a6598608c",
+      "name": "Get Legal Documents",
+      "credentials": {
+        "supabaseApi": {
+          "id": "GAXI2okVDAx3Ea8z",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 7
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1072,
+        288
+      ],
+      "id": "4f000040-ec3d-4834-8950-9e086ce7f5b4",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_GROQ_API_KEY_HERE"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [{\n      \"role\": \"system\",\n      \"content\": \"You are a legal terminology expert. Convert user descriptions into proper legal search terms for case law databases.\\n\\nYour task: Transform colloquial descriptions into precise legal concepts that would appear in court cases and legal databases.\\n\\nGuidelines:\\n- Focus on the underlying legal violations and charges\\n- Use standard legal terminology that would appear in case law\\n- Include related criminal and civil concepts\\n- Format as search terms separated by OR\\n- Be comprehensive but precise\\n\\nExamples:\\n- 'smashed phone' → 'property damage OR criminal mischief OR destruction of property OR vandalism'\\n- 'wife/husband' → 'domestic violence OR intimate partner violence OR domestic relations OR marital discord'\\n- 'hit someone' → 'assault OR battery OR domestic violence OR physical abuse'\\n- 'took without asking' → 'theft OR larceny OR conversion OR stolen property'\\n- 'broke into house' → 'burglary OR breaking and entering OR trespass OR unlawful entry'\\n\\nRespond with ONLY the legal search terms, no explanation.\"\n  }, {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Normalize Message').item.json.messageText }}\"\n  }],\n  \"max_tokens\": 150,\n  \"temperature\": 0.1\n}",
+        "options": {}
+      },
+      "id": "legal-term-interpreter",
+      "name": "Legal Term Interpreter (Groq)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        -128,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Google Scholar HTML to extract case information\nconst items = [];\n\nfor (const item of $input.all()) {\n  let cases = [];\n  \n  if (item.json.data && typeof item.json.data === 'string') {\n    const html = item.json.data;\n    \n    try {\n      // Extract case results using regex patterns\n      // Google Scholar case results are in div.gs_r elements\n      const caseMatches = html.match(/<div class=\"gs_r[^\"]*\">.*?<\\/div>(?=\\s*<div class=\"gs_r|\\s*<\\/div>)/gs) || [];\n      \n      console.log(`Found ${caseMatches.length} potential case matches`);\n      \n      for (let i = 0; i < Math.min(caseMatches.length, 10); i++) {\n        const caseHtml = caseMatches[i];\n        \n        // Extract case title/name from <h3 class=\"gs_rt\">\n        const titleMatch = caseHtml.match(/<h3[^>]*class=\"[^\"]*gs_rt[^\"]*\"[^>]*>.*?<a[^>]*>([^<]+)<\\/a>.*?<\\/h3>/s);\n        const caseName = titleMatch ? titleMatch[1].trim() : null;\n        \n        // Extract citation from <div class=\"gs_a\">\n        const citationMatch = caseHtml.match(/<div[^>]*class=\"[^\"]*gs_a[^\"]*\"[^>]*>([^<]+)</s);\n        let citation = citationMatch ? citationMatch[1].trim() : '';\n        \n        // Clean up citation (remove HTML entities, extra spaces)\n        citation = citation.replace(/&[^;]+;/g, ' ').replace(/\\s+/g, ' ').trim();\n        \n        // Extract snippet from <div class=\"gs_rs\">\n        const snippetMatch = caseHtml.match(/<div[^>]*class=\"[^\"]*gs_rs[^\"]*\"[^>]*>([\\s\\S]*?)<\\/div>/s);\n        let snippet = snippetMatch ? snippetMatch[1] : '';\n        \n        // Clean snippet - remove HTML tags, decode entities, clean whitespace\n        snippet = snippet\n          .replace(/<[^>]+>/g, ' ')  // Remove HTML tags\n          .replace(/&[^;]+;/g, ' ')  // Remove HTML entities\n          .replace(/\\s+/g, ' ')      // Normalize whitespace\n          .trim();\n        \n        // Extract case URL if available\n        const urlMatch = caseHtml.match(/<a[^>]+href=\"([^\"]+)\"[^>]*>[^<]+<\\/a>/);\n        const caseUrl = urlMatch ? urlMatch[1] : null;\n        \n        // Only include if we have meaningful data\n        if (caseName && (citation || snippet)) {\n          cases.push({\n            caseName: caseName,\n            citation: citation || 'Citation not available',\n            snippet: snippet.substring(0, 300) + (snippet.length > 300 ? '...' : ''),\n            url: caseUrl,\n            source: 'Google Scholar',\n            relevanceScore: Math.max(0.9 - (i * 0.1), 0.1) // Decrease relevance by position\n          });\n        }\n      }\n      \n      console.log(`Successfully parsed ${cases.length} cases from Google Scholar`);\n      \n    } catch (error) {\n      console.error('Error parsing Google Scholar HTML:', error);\n      \n      // Fallback: try to extract any text that looks like case names\n      const fallbackMatches = html.match(/([A-Z][a-z]+ v\\. [A-Z][a-z]+|[A-Z][a-z]+ v [A-Z][a-z]+)/g) || [];\n      for (let i = 0; i < Math.min(fallbackMatches.length, 5); i++) {\n        cases.push({\n          caseName: fallbackMatches[i],\n          citation: 'Citation extraction failed',\n          snippet: 'Content extraction failed - raw HTML parsing error',\n          url: null,\n          source: 'Google Scholar (fallback)',\n          relevanceScore: 0.5\n        });\n      }\n    }\n  }\n  \n  // Return structured case data\n  items.push({\n    json: {\n      source: 'google_scholar',\n      cases: cases,\n      totalFound: cases.length,\n      searchQuery: item.json.searchQuery || 'Unknown',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "parse-scholar-html",
+      "name": "Parse Google Scholar HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -304
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Cornell Law HTML to extract legal content\nconst items = [];\n\nfor (const item of $input.all()) {\n  let legalContent = [];\n  \n  if (item.json.data && typeof item.json.data === 'string') {\n    const html = item.json.data;\n    \n    try {\n      console.log('Parsing Cornell Law HTML...');\n      \n      // Cornell Law uses different structures for different content types\n      // Method 1: Extract search result items (common pattern)\n      const resultMatches = html.match(/<div[^>]*class=\"[^\"]*search-result[^\"]*\"[^>]*>[\\s\\S]*?<\\/div>/gi) || [];\n      \n      console.log(`Found ${resultMatches.length} search result items`);\n      \n      for (let i = 0; i < Math.min(resultMatches.length, 8); i++) {\n        const resultHtml = resultMatches[i];\n        \n        // Extract title/heading\n        const titleMatch = resultHtml.match(/<h[1-6][^>]*>.*?<a[^>]*>([^<]+)<\\/a>.*?<\\/h[1-6]>/i) || \n                          resultHtml.match(/<a[^>]*class=\"[^\"]*title[^\"]*\"[^>]*>([^<]+)<\\/a>/i);\n        const title = titleMatch ? titleMatch[1].trim() : null;\n        \n        // Extract URL\n        const urlMatch = resultHtml.match(/<a[^>]+href=\"([^\"]+)\"[^>]*>/i);\n        let url = urlMatch ? urlMatch[1] : null;\n        if (url && !url.startsWith('http')) {\n          url = url.startsWith('/') ? 'https://www.law.cornell.edu' + url : 'https://www.law.cornell.edu/' + url;\n        }\n        \n        // Extract description/snippet\n        const descMatch = resultHtml.match(/<p[^>]*class=\"[^\"]*description[^\"]*\"[^>]*>([^<]+)<\\/p>/i) ||\n                         resultHtml.match(/<div[^>]*class=\"[^\"]*snippet[^\"]*\"[^>]*>([\\s\\S]*?)<\\/div>/i);\n        let description = descMatch ? descMatch[1].trim() : '';\n        \n        // Clean description\n        description = description\n          .replace(/<[^>]+>/g, ' ')\n          .replace(/&[^;]+;/g, ' ')\n          .replace(/\\s+/g, ' ')\n          .trim();\n        \n        if (title && (description || url)) {\n          legalContent.push({\n            title: title,\n            description: description.substring(0, 200) + (description.length > 200 ? '...' : ''),\n            url: url,\n            source: 'Cornell Law School',\n            type: 'legal_article',\n            relevanceScore: Math.max(0.8 - (i * 0.1), 0.2)\n          });\n        }\n      }\n      \n      // Method 2: Extract statute references and legal definitions\n      const statuteMatches = html.match(/\\b\\d+\\s+U\\.?S\\.?C\\.?\\s*§?\\s*\\d+[a-z]*(?:\\([^)]+\\))?/gi) || [];\n      const cfr_matches = html.match(/\\b\\d+\\s+C\\.?F\\.?R\\.?\\s*§?\\s*\\d+(?:\\.\\d+)*/gi) || [];\n      \n      if (statuteMatches.length > 0 || cfr_matches.length > 0) {\n        const allStatutes = [...new Set([...statuteMatches, ...cfr_matches])];\n        for (let j = 0; j < Math.min(allStatutes.length, 5); j++) {\n          legalContent.push({\n            title: `Federal Statute: ${allStatutes[j]}`,\n            description: `Legal reference found in Cornell Law database`,\n            url: null,\n            source: 'Cornell Law School',\n            type: 'statute_reference',\n            relevanceScore: 0.7\n          });\n        }\n      }\n      \n      // Method 3: Fallback - extract any content that looks legal\n      if (legalContent.length === 0) {\n        const fallbackMatches = html.match(/([A-Z][a-z]+\\s+v\\.?\\s+[A-Z][a-z]+|\\d+\\s+U\\.S\\.|§\\s*\\d+)/gi) || [];\n        for (let k = 0; k < Math.min(fallbackMatches.length, 3); k++) {\n          legalContent.push({\n            title: fallbackMatches[k],\n            description: 'Legal reference extracted from Cornell Law',\n            url: null,\n            source: 'Cornell Law School (extracted)',\n            type: 'legal_reference',\n            relevanceScore: 0.5\n          });\n        }\n      }\n      \n      console.log(`Successfully parsed ${legalContent.length} items from Cornell Law`);\n      \n    } catch (error) {\n      console.error('Error parsing Cornell Law HTML:', error);\n      \n      // Basic fallback\n      legalContent.push({\n        title: 'Cornell Law Search Results',\n        description: 'Content parsing failed - search results available but not parsed',\n        url: null,\n        source: 'Cornell Law School',\n        type: 'search_results',\n        relevanceScore: 0.3\n      });\n    }\n  }\n  \n  // Return structured legal content\n  items.push({\n    json: {\n      source: 'cornell_law',\n      content: legalContent,\n      totalFound: legalContent.length,\n      searchQuery: item.json.searchQuery || 'Unknown',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "parse-cornell-html",
+      "name": "Parse Cornell Law HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        -128
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse FindLaw HTML to extract case law and legal content\nconst items = [];\n\nfor (const item of $input.all()) {\n  let legalContent = [];\n  \n  if (item.json.data && typeof item.json.data === 'string') {\n    const html = item.json.data;\n    \n    try {\n      console.log('Parsing FindLaw HTML...');\n      \n      // FindLaw typically uses specific patterns for case results\n      // Method 1: Extract case law results from search\n      const caseMatches = html.match(/<div[^>]*class=\"[^\"]*result[^\"]*\"[^>]*>[\\s\\S]*?<\\/div>/gi) || \n                         html.match(/<article[^>]*class=\"[^\"]*case[^\"]*\"[^>]*>[\\s\\S]*?<\\/article>/gi) || [];\n      \n      console.log(`Found ${caseMatches.length} case result items`);\n      \n      for (let i = 0; i < Math.min(caseMatches.length, 8); i++) {\n        const caseHtml = caseMatches[i];\n        \n        // Extract case title/name\n        const titleMatch = caseHtml.match(/<h[1-6][^>]*>.*?<a[^>]*>([^<]+)<\\/a>.*?<\\/h[1-6]>/i) ||\n                          caseHtml.match(/<a[^>]*class=\"[^\"]*title[^\"]*\"[^>]*>([^<]+)<\\/a>/i) ||\n                          caseHtml.match(/<a[^>]*>([A-Z][a-z]+\\s+v\\.?\\s+[A-Z][a-z]+[^<]*)<\\/a>/i);\n        const title = titleMatch ? titleMatch[1].trim() : null;\n        \n        // Extract case URL\n        const urlMatch = caseHtml.match(/<a[^>]+href=\"([^\"]+)\"[^>]*>/i);\n        let url = urlMatch ? urlMatch[1] : null;\n        if (url && !url.startsWith('http')) {\n          url = url.startsWith('/') ? 'https://caselaw.findlaw.com' + url : 'https://caselaw.findlaw.com/' + url;\n        }\n        \n        // Extract court and date information\n        const courtMatch = caseHtml.match(/([A-Z][a-z\\s]+Court[^,]*)/i);\n        const court = courtMatch ? courtMatch[1].trim() : null;\n        \n        const dateMatch = caseHtml.match(/(\\d{4}|\\w+\\s+\\d{1,2},\\s+\\d{4})/i);\n        const date = dateMatch ? dateMatch[1] : null;\n        \n        // Extract description/snippet\n        const descMatch = caseHtml.match(/<p[^>]*class=\"[^\"]*description[^\"]*\"[^>]*>([\\s\\S]*?)<\\/p>/i) ||\n                         caseHtml.match(/<div[^>]*class=\"[^\"]*snippet[^\"]*\"[^>]*>([\\s\\S]*?)<\\/div>/i) ||\n                         caseHtml.match(/<p[^>]*>([\\s\\S]{50,300}?)<\\/p>/i);\n        let description = descMatch ? descMatch[1].trim() : '';\n        \n        // Clean description\n        description = description\n          .replace(/<[^>]+>/g, ' ')\n          .replace(/&[^;]+;/g, ' ')\n          .replace(/\\s+/g, ' ')\n          .trim();\n        \n        if (title && (description || court || date)) {\n          legalContent.push({\n            title: title,\n            description: description.substring(0, 250) + (description.length > 250 ? '...' : ''),\n            court: court,\n            date: date,\n            url: url,\n            source: 'FindLaw',\n            type: 'case_law',\n            relevanceScore: Math.max(0.9 - (i * 0.1), 0.2)\n          });\n        }\n      }\n      \n      // Method 2: Extract statute and code references\n      const statuteMatches = html.match(/\\b\\d+\\s+U\\.?S\\.?C\\.?\\s*§?\\s*\\d+[a-z]*(?:\\([^)]+\\))?/gi) || [];\n      const stateCodeMatches = html.match(/\\b[A-Z]{2,}\\s+§?\\s*\\d+[a-z]*(?:[.-]\\d+)*/gi) || [];\n      \n      if (statuteMatches.length > 0 || stateCodeMatches.length > 0) {\n        const allStatutes = [...new Set([...statuteMatches, ...stateCodeMatches])];\n        for (let j = 0; j < Math.min(allStatutes.length, 4); j++) {\n          legalContent.push({\n            title: `Legal Code: ${allStatutes[j]}`,\n            description: `Statute reference found in FindLaw database`,\n            court: null,\n            date: null,\n            url: null,\n            source: 'FindLaw',\n            type: 'statute_reference',\n            relevanceScore: 0.7\n          });\n        }\n      }\n      \n      // Method 3: Extract legal definitions and concepts\n      const definitionMatches = html.match(/\"[^\"]{20,100}\"/g) || [];\n      for (let k = 0; k < Math.min(definitionMatches.length, 3); k++) {\n        const definition = definitionMatches[k].replace(/\"/g, '').trim();\n        if (definition.length > 30) {\n          legalContent.push({\n            title: 'Legal Definition',\n            description: definition,\n            court: null,\n            date: null,\n            url: null,\n            source: 'FindLaw',\n            type: 'definition',\n            relevanceScore: 0.6\n          });\n        }\n      }\n      \n      // Method 4: Fallback - extract any case-like patterns\n      if (legalContent.length === 0) {\n        const fallbackMatches = html.match(/([A-Z][a-z]+\\s+v\\.?\\s+[A-Z][a-z]+|[A-Z][A-Z\\s]+Court)/gi) || [];\n        for (let l = 0; l < Math.min(fallbackMatches.length, 3); l++) {\n          legalContent.push({\n            title: fallbackMatches[l],\n            description: 'Legal reference extracted from FindLaw',\n            court: null,\n            date: null,\n            url: null,\n            source: 'FindLaw (extracted)',\n            type: 'legal_reference',\n            relevanceScore: 0.4\n          });\n        }\n      }\n      \n      console.log(`Successfully parsed ${legalContent.length} items from FindLaw`);\n      \n    } catch (error) {\n      console.error('Error parsing FindLaw HTML:', error);\n      \n      // Basic fallback\n      legalContent.push({\n        title: 'FindLaw Search Results',\n        description: 'Content parsing failed - search results available but not parsed',\n        court: null,\n        date: null,\n        url: null,\n        source: 'FindLaw',\n        type: 'search_results',\n        relevanceScore: 0.3\n      });\n    }\n  }\n  \n  // Return structured legal content\n  items.push({\n    json: {\n      source: 'findlaw',\n      content: legalContent,\n      totalFound: legalContent.length,\n      searchQuery: item.json.searchQuery || 'Unknown',\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn items;"
+      },
+      "id": "parse-findlaw-html",
+      "name": "Parse FindLaw HTML",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.courtlistener.com/api/rest/v3/search/?type=o&court=scotus&q={{ encodeURIComponent($('Legal Term Interpreter (Groq)').item.json.choices[0].message.content) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        592,
+        -480
+      ],
+      "id": "4d9017a9-8b77-4c55-9e05-a7c0b7e814f7",
+      "name": "Search CourtListener Database",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "a16BZtr8olObDWKP",
+          "name": "Bearer Auth account 2"
+        },
+        "httpHeaderAuth": {
+          "id": "HttOqB55b67CXus3",
+          "name": "Header Auth account"
+        },
+        "httpBasicAuth": {
+          "id": "ONIcJliF0pjYFaoI",
+          "name": "Unnamed credential"
+        }
+      }
     }
   ],
+  "pinData": {
+    "Telegram Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.modernwizard.win",
+            "content-length": "312",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "91.108.5.76",
+            "cf-ipcountry": "NL",
+            "cf-ray": "98ea86c41db3f531-AMS",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "cf-warp-tag-id": "301047e0-45cc-4792-9107-e54ecb369660",
+            "connection": "keep-alive",
+            "content-type": "application/json",
+            "x-forwarded-for": "91.108.5.76",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "update_id": 383995441,
+            "message": {
+              "message_id": 312,
+              "from": {
+                "id": 7998792537,
+                "is_bot": false,
+                "first_name": "CleverCortex",
+                "username": "CleverCortex",
+                "language_code": "en"
+              },
+              "chat": {
+                "id": 7998792537,
+                "first_name": "CleverCortex",
+                "username": "CleverCortex",
+                "type": "private"
+              },
+              "date": 1760481080,
+              "text": "Man punches his wife"
+            }
+          },
+          "webhookUrl": "https://n8n.modernwizard.win/webhook/telegram-webhook",
+          "executionMode": "production"
+        }
+      }
+    ]
+  },
   "connections": {
     "Telegram Webhook": {
       "main": [
@@ -711,37 +839,17 @@
       "main": [
         [
           {
-            "node": "Search FindLaw Database",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Search Cornell Law",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Search Google Scholar Legal",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Search Justia Legal Database",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Get Legal Documents",
-            "type": "main",
-            "index": 0
-          },
-          {
             "node": "Get Conversation Memory",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Generate Query Embedding",
+            "node": "Legal Term Interpreter (Groq)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Legal Documents",
             "type": "main",
             "index": 0
           }
@@ -783,7 +891,7 @@
           {
             "node": "Merge",
             "type": "main",
-            "index": 4
+            "index": 5
           }
         ]
       ]
@@ -817,22 +925,6 @@
             "node": "Update Conversation Memory",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Send Legal Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Update Conversation Memory": {
-      "main": [
-        [
-          {
-            "node": "Webhook Response",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -863,9 +955,9 @@
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Parse FindLaw HTML",
             "type": "main",
-            "index": 3
+            "index": 0
           }
         ]
       ]
@@ -874,9 +966,9 @@
       "main": [
         [
           {
-            "node": "Merge",
+            "node": "Parse Cornell Law HTML",
             "type": "main",
-            "index": 2
+            "index": 0
           }
         ]
       ]
@@ -885,9 +977,53 @@
       "main": [
         [
           {
+            "node": "Parse Google Scholar HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Search HTTP Request": {
+      "main": [
+        [
+          {
             "node": "Merge",
             "type": "main",
-            "index": 1
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Debug Embedding Response": {
+      "main": [
+        [
+          {
+            "node": "Vector Search HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Conversation Memory": {
+      "main": [
+        [
+          {
+            "node": "Send Legal Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Legal Documents": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 6
           }
         ]
       ]
@@ -903,44 +1039,75 @@
         ]
       ]
     },
-    "Get Legal Documents": {
+    "Legal Term Interpreter (Groq)": {
       "main": [
         [
           {
-            "node": "Merge",
-            "type": "6",
+            "node": "Search CourtListener Database",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search Google Scholar Legal",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search Cornell Law",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search FindLaw Database",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Query Embedding",
+            "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Search Justia Legal Database": {
-      "main": [
-        [
-          {
-            "node": "Merge",
-            "type": "0",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Vector Search HTTP Request": {
+    "Parse Google Scholar HTML": {
       "main": [
         [
           {
             "node": "Merge",
             "type": "main",
-            "index": 5
+            "index": 1
           }
         ]
       ]
     },
-    "Debug Embedding Response": {
+    "Parse Cornell Law HTML": {
       "main": [
         [
           {
-            "node": "Vector Search HTTP Request",
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Parse FindLaw HTML": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Search CourtListener Database": {
+      "main": [
+        [
+          {
+            "node": "Merge",
             "type": "main",
             "index": 0
           }
@@ -948,61 +1115,13 @@
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "staticData": null,
+  "active": true,
+  "settings": {},
+  "versionId": "f54dbe9d-799c-488a-9f11-4b9857d6d67a",
   "meta": {
-    "templateCredsSetupCompleted": true
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d410d616d2e66edd093f3b287f500ae19fea1907c2fd86cb81f4159b1117a048"
   },
-  "pinData": {
-    "Telegram Webhook": [
-      {
-        "json": {
-          "headers": {
-            "host": "n8n.modernwizard.win",
-            "content-length": "305",
-            "accept-encoding": "gzip, br",
-            "cdn-loop": "cloudflare; loops=1",
-            "cf-connecting-ip": "91.108.5.76",
-            "cf-ipcountry": "NL",
-            "cf-ray": "98dc37041eedfeb7-AMS",
-            "cf-visitor": "{\"scheme\":\"https\"}",
-            "cf-warp-tag-id": "301047e0-45cc-4792-9107-e54ecb369660",
-            "connection": "keep-alive",
-            "content-type": "application/json",
-            "x-forwarded-for": "91.108.5.76",
-            "x-forwarded-proto": "https"
-          },
-          "params": {},
-          "query": {},
-          "body": {
-            "update_id": 383995378,
-            "message": {
-              "message_id": 137,
-              "from": {
-                "id": 7998792537,
-                "is_bot": false,
-                "first_name": "CleverCortex",
-                "username": "CleverCortex",
-                "language_code": "en"
-              },
-              "chat": {
-                "id": 7998792537,
-                "first_name": "CleverCortex",
-                "username": "CleverCortex",
-                "type": "private"
-              },
-              "date": 1760331013,
-              "text": "Man stole car"
-            }
-          },
-          "webhookUrl": "https://n8n.modernwizard.win/webhook/telegram-webhook",
-          "executionMode": "production"
-        }
-      }
-    ]
-  },
-  "versionId": "d184d29f-c2af-4966-8cb9-ce0d82ac22f6",
-  "triggerCount": 1
+  "id": "AdX8utsuSqpmu5Lj",
+  "tags": []
 }

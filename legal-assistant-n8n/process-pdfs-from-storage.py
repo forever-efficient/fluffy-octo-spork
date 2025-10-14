@@ -174,8 +174,15 @@ def store_in_vector_db(supabase: Client, filename: str, chunks: list, embeddings
             elif "text" in schema_columns:
                 data["text"] = chunk
             
-            # Always include embedding
-            data["embedding"] = embedding
+            # Always include embedding - FIXED: Ensure proper vector format for PostgreSQL
+            # Convert list to proper PostgreSQL vector format
+            if isinstance(embedding, list) and len(embedding) == 384:
+                # Format as PostgreSQL vector: [0.1, 0.2, 0.3, ...]
+                vector_string = '[' + ','.join([str(float(x)) for x in embedding]) + ']'
+                data["embedding"] = vector_string
+            else:
+                print(f"❌ Warning: Invalid embedding format for chunk {i}: {type(embedding)}, length: {len(embedding) if isinstance(embedding, list) else 'N/A'}")
+                continue  # Skip this chunk if embedding is invalid
             
             # Add metadata if supported
             if "metadata" in schema_columns:
