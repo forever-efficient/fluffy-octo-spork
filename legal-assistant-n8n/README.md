@@ -1,6 +1,14 @@
 # Legal Assistant n8n Bot
 
-A comprehensive n8n automation workflow that creates a Telegram bot for legal and criminal law assistance. The bot validates incoming messages, processes legal questions using AI, and maintains conversation memory for follow-up questions.
+A comprehensive n8n automation workflow that creates a Telegram bot for advanced legal and criminal law assistance. The bot validates incoming messages, processes legal questions using AI with RAG (Retrieval-Augmented Generation), and maintains conversation memory for follow-up questions.
+
+## 🆕 **Latest Enhancements**
+
+- 🔧 **Fixed Vector Search**: Resolved embedding model mismatch for accurate legal document retrieval
+- 🏛️ **Legal Term Interpreter**: Advanced legal terminology analysis and interpretation
+- 🌐 **Multi-Source HTML Parsing**: Automatic parsing of Google Scholar, Cornell Law, and FindLaw
+- 🎯 **Enhanced RAG**: Improved context retrieval with BAAI/bge-small-en-v1.5 embeddings
+- 📊 **Optimized AI Context**: Smarter context preparation for better legal responses
 
 ## Features
 
@@ -8,28 +16,29 @@ A comprehensive n8n automation workflow that creates a Telegram bot for legal an
 - 🛡️ **Content Guardrails**: AI-powered validation for legal/crime topics only
 - 🎯 **Scenario Analysis**: Analyzes criminal scenarios (e.g., "a wife smashes her husband's phone")
 - ❓ **Direct Legal Questions**: Answers specific legal questions (e.g., "What are Miranda rights?")
-- 🧠 **AI Legal Analysis**: Uses free AI models for comprehensive legal reasoning
-- 📚 **Document Access**: Integrates with legal PDFs and external APIs
-- � **Vector Search**: Advanced semantic search through legal documents using HuggingFace embeddings
+- 🧠 **AI Legal Analysis**: Uses Groq AI models for comprehensive legal reasoning
+- 📚 **Document Access**: Integrates with legal PDFs and external legal databases
+- 🔍 **Vector Search**: Advanced semantic search through legal documents using BAAI/bge-small-en-v1.5 embeddings
 - 🎯 **RAG Integration**: Retrieval-Augmented Generation for context-aware legal responses
-- �💾 **Conversation Memory**: Maintains context for follow-up questions
+- 💾 **Conversation Memory**: Maintains context for follow-up questions
 - 📊 **Database Logging**: Tracks rejected requests and conversation history
 - 🔒 **Security**: Rate limiting and user management
 
 ## Architecture
 
 ```
-Telegram Message → Content Validation → AI Analysis → Response Formatting → Database Logging
-                ↓                   ↓              ↓                    ↓
-            Voice-to-Text      Vector Search +  Conversation      Rejection
-                              Legal Document   Memory Update      Logging
-                              Retrieval (RAG)
+Telegram Message → Content Validation → Legal Term Interpreter → Vector Search → AI Analysis → Response Formatting
+                ↓                   ↓                        ↓              ↓               ↓
+            Voice-to-Text      Legal Analysis         Document Retrieval   Multi-Source    Database
+                                                     (BAAI/bge-small)     HTML Parsing     Logging
+                                                                        (Scholar/Cornell)
 ```
 
 **Vector Search Pipeline:**
 - **HuggingFace Embeddings**: BAAI/bge-small-en-v1.5 (384-dimensional)
 - **Semantic Similarity**: Cosine distance matching with configurable thresholds
 - **Document Chunking**: Optimized text chunks for better retrieval accuracy
+- **Multi-Source Integration**: Real-time legal database queries and parsing
 
 ## Quick Start
 
@@ -47,8 +56,8 @@ cd legal-assistant-n8n
 ./setup-self-hosted.sh
 
 # 2. In your n8n web interface:
-# - Import legal-assistant-workflow.json
-# - Configure 3 credentials
+# - Import legal-assistant-bot-workflow.json
+# - Configure credentials (Telegram, Supabase, Groq)
 # - Activate workflow
 ```
 
@@ -89,7 +98,7 @@ If migrating from OpenAI embeddings (1536-dim) to HuggingFace (384-dim), run `mi
 
 1. Access your n8n instance
 2. Click **"Import from File"**
-3. Select `legal-assistant-workflow.json`
+3. Select `legal-assistant-bot-workflow.json`
 4. The workflow will be imported with all nodes configured
 
 ### 4. Configure Credentials in n8n
@@ -111,9 +120,11 @@ Set up these credential types in your n8n instance:
 - Model: `BAAI/bge-small-en-v1.5` (384-dimensional embeddings)
 
 #### **Groq API:**
-- Credential Type: `HTTP Header Auth` or `Generic Credential`
+- Credential Type: `HTTP Header Auth`
 - Header Name: `Authorization`
-- Header Value: `Bearer your_groq_api_key`
+- Header Value: `Bearer YOUR_GROQ_API_KEY_HERE`
+
+**Note**: Replace placeholder API keys in the workflow JSON with your actual credentials.
 
 ### 5. Set Telegram Webhook
 
@@ -224,9 +235,21 @@ The bot uses **HuggingFace BAAI/bge-small-en-v1.5** for generating 384-dimension
 
 ### Key Components
 - **Embedding Generation**: Real-time query embedding via HuggingFace API
-- **Document Processing**: PDF documents chunked and embedded using `process-pdfs-from-storage.py`
+- **Document Processing**: PDF documents chunked and embedded using `process-pdfs-from-storage-idempotent.py`
 - **Similarity Search**: PostgreSQL with pgvector extension for efficient vector operations
 - **RAG Integration**: Retrieved documents enhance AI responses with relevant context
+
+### PDF Processing Scripts
+
+#### **process-pdfs-from-storage-idempotent.py** (Current/Recommended)
+- ✅ **Idempotent processing**: Safely re-runnable without duplicates
+- ✅ **BAAI/bge-small-en-v1.5**: Correct embedding model matching n8n workflow
+- ✅ **Error handling**: Robust processing with proper logging
+- ✅ **Chunk optimization**: Improved text segmentation for better retrieval
+
+#### **regenerate-embeddings.py** (Migration Tool)
+- 🔄 **Embedding migration**: Convert existing documents to new model
+- 🧪 **Testing utility**: Validate embedding generation and storage
 
 ### Database Schema
 ```sql
@@ -254,11 +277,11 @@ CREATE FUNCTION match_legal_documents(
 - **Configurable Thresholds**: Similarity matching tuned for legal content
 - **Batch Processing**: Efficient embedding generation for document ingestion
 
-### Migration Support
-If migrating from OpenAI embeddings (1536-dim) to HuggingFace (384-dim):
-1. Run `migration-script-384.sql` to update schema
-2. Re-process documents with `process-pdfs-from-storage.py`
-3. Update workflow to use new embedding model
+### Database Scripts
+- **`vector-database-schema-384.sql`**: Full schema with legal_documents table dependency
+- **`vector-database-schema-standalone.sql`**: Simplified schema for standalone PDF processing
+- **`vector-search-function-384.sql`**: Optimized similarity search function
+- **`migration-script-384.sql`**: Migration from older embedding models
 
 ## Response Format
 

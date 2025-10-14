@@ -8,7 +8,7 @@ echo "📦 Installing Python packages..."
 pip3 install -r requirements.txt
 
 # Make the processing script executable
-chmod +x process-pdfs-from-storage.py
+chmod +x process-pdfs-from-storage-idempotent.py
 
 echo ""
 echo "✅ Setup complete!"
@@ -23,8 +23,8 @@ echo "4. Click 'RUN' to create the 384-dimensional vector table"
 echo ""
 echo "📋 Then to process PDFs:"
 echo "1. Upload PDFs to Supabase storage bucket 'legal-documents'"
-echo "2. Update API keys in process-pdfs-from-storage.py if needed"
-echo "3. Run: python3 process-pdfs-from-storage.py"
+echo "2. Update API keys in process-pdfs-from-storage-idempotent.py if needed"
+echo "3. Run: python3 process-pdfs-from-storage-idempotent.py"
 echo ""
 echo "🎯 This creates embeddings compatible with:"
 echo "   - HuggingFace BAAI/bge-small-en-v1.5 (384-dim)"

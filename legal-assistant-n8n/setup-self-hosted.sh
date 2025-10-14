@@ -159,7 +159,7 @@ workflow_import_instructions() {
     echo ""
     echo "1. Open your n8n instance in a web browser"
     echo "2. Click 'Add workflow' → 'Import from File'"
-    echo "3. Select the 'legal-assistant-workflow.json' file"
+    echo "3. Select the 'legal-assistant-bot-workflow.json' file"
     echo "4. Configure the following credentials:"
     echo ""
     echo "   📱 Telegram Bot API:"
@@ -221,7 +221,7 @@ create_summary() {
 - Groq API Key: ${GROQ_KEY:0:20}...
 
 🔧 Next Steps:
-1. Import legal-assistant-workflow.json into n8n
+1. Import legal-assistant-bot-workflow.json into n8n
 2. Configure the 3 credential types
 3. Activate the workflow
 4. Test with legal questions
@@ -273,7 +273,7 @@ main() {
     echo "Your Legal Assistant Bot is ready to import into n8n!"
     echo ""
     echo "📁 Key Files:"
-    echo "   - legal-assistant-workflow.json (import this)"
+    echo "   - legal-assistant-bot-workflow.json (import this)"
     echo "   - SELF_HOSTED_SETUP.md (detailed guide)"
     echo "   - setup-summary.txt (your configuration)"
     echo ""

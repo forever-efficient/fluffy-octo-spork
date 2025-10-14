@@ -133,7 +133,7 @@ import_workflow() {
     echo "1. Open your browser and go to http://localhost:5678"
     echo "2. Login with your credentials (check docker-compose.yml)"
     echo "3. Click on 'Import from File'"
-    echo "4. Select the 'legal-assistant-workflow.json' file"
+    echo "4. Select the 'legal-assistant-bot-workflow.json' file"
     echo "5. Configure the following credentials:"
     echo "   - Telegram Bot API"
     echo "   - Supabase API" 
