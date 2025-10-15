@@ -5,10 +5,19 @@ Script to regenerate embeddings with BAAI/bge-small-en-v1.5 model
 
 from supabase import create_client, Client
 from sentence_transformers import SentenceTransformer
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configuration
-SUPABASE_URL = "https://ioncpiocmpusocereeia.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvbmNwaW9jbXB1c29jZXJlZWlhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDA5Mzc2NiwiZXhwIjoyMDc1NjY5NzY2fQ.eLkYThE01N7JDbNGx1x9B2ja17jNE-dPj7Qxj_NLvtY"
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+
+# Validate required environment variables
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables or .env file")
 
 def init_supabase():
     """Initialize Supabase client"""

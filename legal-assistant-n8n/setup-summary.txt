@@ -7,10 +7,10 @@
 🧠 AI Provider: Groq (llama3 models)
 
 📋 Credentials Used:
-- Telegram Bot Token: 8025391476:AAH0Q9F2OLQfvm3NUFm2gRxAvVJoD0A-WHk
+- Telegram Bot Token: [CONFIGURED IN N8N CREDENTIALS]
 - Supabase URL: https://ioncpiocmpusocereeia.supabase.co
-- Supabase Service Key: eyJhbGciOiJIUzI1NiIs...
-- Groq API Key: gsk_klc8XLw3zGU7jc5r...
+- Supabase Service Key: [CONFIGURED IN .ENV FILE AND N8N CREDENTIALS]
+- Groq API Key: [CONFIGURED IN N8N CREDENTIALS]
 
 🔧 Next Steps:
 1. Import legal-assistant-workflow.json into n8n

@@ -10,13 +10,22 @@ import PyPDF2
 from io import BytesIO
 from datetime import datetime
 import hashlib
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Configuration
-SUPABASE_URL = "https://ioncpiocmpusocereeia.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlvbmNwaW9jbXB1c29jZXJlZWlhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDA5Mzc2NiwiZXhwIjoyMDc1NjY5NzY2fQ.eLkYThE01N7JDbNGx1x9B2ja17jNE-dPj7Qxj_NLvtY"
-STORAGE_BUCKET = "legal-documents"
-CHUNK_SIZE = 1000
-CHUNK_OVERLAP = 200
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+STORAGE_BUCKET = os.getenv('STORAGE_BUCKET', 'legal-documents')
+CHUNK_SIZE = int(os.getenv('CHUNK_SIZE', '1000'))
+CHUNK_OVERLAP = int(os.getenv('CHUNK_OVERLAP', '200'))
+
+# Validate required environment variables
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables or .env file")
 
 def init_supabase():
     """Initialize Supabase client"""
