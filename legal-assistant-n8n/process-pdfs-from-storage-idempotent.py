@@ -40,15 +40,12 @@ def check_if_processed(supabase: Client, filename: str) -> bool:
     try:
         print(f"🔍 Checking if {filename} was already processed in legal_documents_vectors...")
         
-        # Simple approach: check if any records exist with this filename in metadata
-        result = supabase.table("legal_documents_vectors").select("id,metadata").limit(10).execute()
+        # Fixed approach: filter directly by filename in metadata
+        result = supabase.table("legal_documents_vectors").select("id").eq("metadata->>title", filename).limit(1).execute()
         
-        if result.data:
-            for record in result.data:
-                if record.get('metadata') and isinstance(record['metadata'], dict):
-                    if record['metadata'].get('title') == filename:
-                        print(f"✅ Found existing chunks for {filename} (skipping)")
-                        return True
+        if result.data and len(result.data) > 0:
+            print(f"✅ Found existing chunks for {filename} (skipping)")
+            return True
         
         print(f"❌ No existing data found for {filename}, will process")
         return False
@@ -94,14 +91,15 @@ def simple_count_check(supabase: Client, filename: str) -> bool:
 def check_content_hash(supabase: Client, file_hash: str) -> bool:
     """Check if content with this hash already exists"""
     try:
-        result = supabase.table("legal_document_embeddings").select("id").eq("metadata->>file_hash", file_hash).limit(1).execute()
-        return result.data and len(result.data) > 0
-    except Exception:
+        # Check both table names for compatibility
+        for table_name in ["legal_documents_vectors", "legal_document_embeddings"]:
+            try:
+                result = supabase.table(table_name).select("id").eq("metadata->>file_hash", file_hash).limit(1).execute()
+                if result.data and len(result.data) > 0:
+                    return True
+            except Exception:
+                continue
         return False
-    """Check if content with this hash already exists"""
-    try:
-        result = supabase.table("legal_document_embeddings").select("id").eq("metadata->>file_hash", file_hash).limit(1).execute()
-        return result.data and len(result.data) > 0
     except Exception:
         return False
 
