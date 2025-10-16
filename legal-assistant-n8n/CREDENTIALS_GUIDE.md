@@ -35,7 +35,7 @@
 1. Go to [supabase.com](https://supabase.com) and create project
 2. Go to **Settings** → **API**
 3. Copy **Project URL** and **service_role** key
-4. Run the SQL from `database-schema.sql` in SQL Editor
+4. Run the SQL from `create-correct-vector-function.sql` in SQL Editor
 
 ---
 

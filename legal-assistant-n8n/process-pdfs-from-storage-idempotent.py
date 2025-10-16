@@ -244,24 +244,32 @@ def store_in_vector_db(supabase: Client, filename: str, chunks: list, embeddings
     return success_count
 
 def log_processing(supabase: Client, filename: str, chunks_created: int, file_hash: str):
-    """Log processing result"""
+    """Log processing result to a local file"""
     try:
-        data = {
-            "file_name": filename,
-            "title": filename,
-            "document_type": "legal_document",
-            "category": "general",
-            "processing_status": "completed",
-            "chunks_created": chunks_created,
-            "processed_at": datetime.now().isoformat(),
-            "file_hash": file_hash
-        }
+        # Create log entry
+        timestamp = datetime.now().isoformat()
         
-        supabase.table("document_processing_logs").insert(data).execute()
+        # Log to file instead of database
+        log_file_path = "pdf_processing.log"
+        
+        # Create header if file doesn't exist
+        import os
+        if not os.path.exists(log_file_path):
+            with open(log_file_path, "w", encoding="utf-8") as log_file:
+                log_file.write("# PDF Processing Log\n")
+                log_file.write("# Format: TIMESTAMP | FILENAME | CHUNKS_CREATED | FILE_HASH\n")
+                log_file.write("# " + "="*80 + "\n")
+        
+        # Append log entry
+        with open(log_file_path, "a", encoding="utf-8") as log_file:
+            log_file.write(f"{timestamp} | {filename} | {chunks_created} chunks | {file_hash[:12]}...\n")
+        
         print(f"✅ Logged processing for {filename}")
         
     except Exception as e:
-        print(f"⚠️  Error logging processing for {filename}: {e}")
+        # This is non-critical - just skip logging if file write fails
+        print(f"⚠️  Could not log {filename}: {str(e)[:50]}...")
+        pass  # Continue processing without failing
 
 def process_single_pdf(supabase: Client, model, filename: str, table_name: str):
     """Process a single PDF file with idempotency checks"""
@@ -347,6 +355,7 @@ def main():
     print(f"✅ Successfully processed: {processed_count} files")
     print(f"⏭️  Skipped (already processed): {skipped_count} files")
     print(f"📊 Total files: {len(pdf_files)}")
+    print(f"📄 Processing log saved to: pdf_processing.log")
 
 if __name__ == "__main__":
     main()

@@ -82,17 +82,12 @@ If you need to set up n8n from scratch:
 ### 2. Setup Supabase Database
 
 1. Create a new Supabase project
-2. Run the SQL from `database-schema.sql` in the Supabase SQL editor
-3. **NEW**: Enable pgvector extension for vector search:
-   ```sql
-   CREATE EXTENSION IF NOT EXISTS vector;
-   ```
-4. Run `vector-database-schema-384.sql` for vector search tables
-5. Run `vector-search-function-384.sql` for similarity search function
-6. Note your project URL and service role key
+2. Run the SQL from `create-correct-vector-function.sql` in the Supabase SQL editor
+   - This creates the table schema, vector search function, and indexes
+   - Includes pgvector extension setup and proper permissions
+3. Note your project URL and service role key
 
-**Vector Database Migration:**
-If migrating from OpenAI embeddings (1536-dim) to HuggingFace (384-dim), run `migration-script-384.sql`
+**Important**: Use only `create-correct-vector-function.sql` - this contains the complete setup that matches your n8n workflow and PDF processing scripts.
 
 ### 3. Import Workflow
 
@@ -177,20 +172,18 @@ curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
 
 ### Tables
 
-1. **rejected_requests**: Logs invalid messages
-2. **user_conversations**: Stores conversation history
-3. **legal_documents**: Legal PDFs and document content
-4. **legal_documents_vectors**: Vector embeddings for semantic search (384-dim)
-5. **legal_apis**: External API configurations
+1. **legal_documents_vectors**: Vector embeddings for semantic search
+   - Schema: `id`, `content`, `embedding (384-dim)`, `metadata`
+   - Optimized HNSW indexes for fast similarity search
+   - Uses BAAI/bge-small-en-v1.5 embeddings
 
 ### Key Features
 
-- Row Level Security (RLS) enabled
-- Optimized indexes for performance (including HNSW vector indexes)
-- JSONB fields for flexible metadata
-- Service role access for n8n
-- **Vector Search**: pgvector extension with 384-dimensional embeddings
-- **Semantic Similarity**: Cosine distance matching for document retrieval
+- pgvector extension with 384-dimensional embeddings
+- HNSW indexing for optimized vector similarity search  
+- Semantic similarity using cosine distance matching
+- Complete schema managed by `create-correct-vector-function.sql`
+- Function: `match_legal_documents` for n8n workflow integration
 
 ## Free AI Models Configuration
 
@@ -241,15 +234,25 @@ The bot uses **HuggingFace BAAI/bge-small-en-v1.5** for generating 384-dimension
 
 ### PDF Processing Scripts
 
-#### **process-pdfs-from-storage-idempotent.py** (Current/Recommended)
+#### **process-pdfs-from-storage-idempotent.py** (Recommended)
+- ✅ **Complete processing**: Processes all 46 PDF files from Supabase storage
 - ✅ **Idempotent processing**: Safely re-runnable without duplicates
 - ✅ **BAAI/bge-small-en-v1.5**: Correct embedding model matching n8n workflow
-- ✅ **Error handling**: Robust processing with proper logging
+- ✅ **384-dimensional vectors**: Matches database schema and search function
+- ✅ **Error handling**: Robust processing with proper logging and file-based logging
 - ✅ **Chunk optimization**: Improved text segmentation for better retrieval
+- ✅ **Batch processing**: Efficient database operations with 50-record batches
 
-#### **regenerate-embeddings.py** (Migration Tool)
-- 🔄 **Embedding migration**: Convert existing documents to new model
-- 🧪 **Testing utility**: Validate embedding generation and storage
+**Usage:**
+```bash
+# Process all PDFs and generate embeddings
+python process-pdfs-from-storage-idempotent.py
+
+# Monitor progress
+tail -f pdf_processing.log
+```
+
+**Note**: This script handles all embedding generation and regeneration needs. No additional migration tools are required.
 
 ### Database Schema
 ```sql
@@ -277,11 +280,8 @@ CREATE FUNCTION match_legal_documents(
 - **Configurable Thresholds**: Similarity matching tuned for legal content
 - **Batch Processing**: Efficient embedding generation for document ingestion
 
-### Database Scripts
-- **`vector-database-schema-384.sql`**: Full schema with legal_documents table dependency
-- **`vector-database-schema-standalone.sql`**: Simplified schema for standalone PDF processing
-- **`vector-search-function-384.sql`**: Optimized similarity search function
-- **`migration-script-384.sql`**: Migration from older embedding models
+### Database Setup
+- **`create-correct-vector-function.sql`**: Complete database setup with table schema, vector search function, indexes, and permissions
 
 ## Response Format
 
@@ -403,6 +403,22 @@ Your legal assistant bot handles both **direct legal questions** and **criminal 
 - **Jurisdictional differences** (federal vs state variations)
 
 📖 **See [SCENARIO_ANALYSIS_EXAMPLES.md](SCENARIO_ANALYSIS_EXAMPLES.md) for detailed examples!**
+
+---
+
+## Additional Documentation
+
+### **📚 User Guides:**
+- **[GROQ_BENEFITS.md](GROQ_BENEFITS.md)** - Why we use Groq AI (performance, cost, reliability)
+- **[ADVANCED_CUSTOMIZATION.md](ADVANCED_CUSTOMIZATION.md)** - Advanced configuration and customization options
+- **[CREDENTIALS_GUIDE.md](CREDENTIALS_GUIDE.md)** - Detailed credential setup instructions
+- **[SELF_HOSTED_SETUP.md](SELF_HOSTED_SETUP.md)** - Complete self-hosted installation guide
+- **[PDF_VECTOR_INTEGRATION_GUIDE.md](PDF_VECTOR_INTEGRATION_GUIDE.md)** - PDF processing and vector search setup
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+
+### **⚙️ For Developers:**
+- **[ADVANCED_CUSTOMIZATION.md](ADVANCED_CUSTOMIZATION.md)** - JavaScript code examples, API integrations, custom modifications
+- **[SETUP_FLOW.md](SETUP_FLOW.md)** - Visual setup process diagram
 
 ---
 

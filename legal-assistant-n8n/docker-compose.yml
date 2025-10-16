@@ -72,7 +72,7 @@ services:
   #     POSTGRES_PASSWORD: ${DB_POSTGRESDB_PASSWORD}
   #   volumes:
   #     - postgres_data:/var/lib/postgresql/data
-  #     - ./database-schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+  #     - ./create-correct-vector-function.sql:/docker-entrypoint-initdb.d/schema.sql:ro
   #   ports:
   #     - "5432:5432"
   #   networks:

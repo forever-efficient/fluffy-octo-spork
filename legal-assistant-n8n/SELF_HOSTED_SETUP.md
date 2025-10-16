@@ -103,7 +103,7 @@ Header Value: Bearer [your_groq_api_key]
 
 1. Go to your Supabase project
 2. Open **SQL Editor**
-3. Copy and paste the contents of `database-schema.sql` (from your local files)
+3. Copy and paste the contents of `create-correct-vector-function.sql` (from your local files)
 4. Click **"Run"**
 
 ## Step 5: Configure Webhook (Automatic - Done by Setup Script)

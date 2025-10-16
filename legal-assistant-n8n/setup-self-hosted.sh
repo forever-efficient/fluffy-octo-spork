@@ -38,7 +38,7 @@ setup_database() {
     echo ""
     echo "1. Go to your Supabase project dashboard"
     echo "2. Navigate to the SQL Editor"
-    echo "3. Copy and paste the contents of 'database-schema.sql'"
+    echo "3. Copy and paste the contents of 'create-correct-vector-function.sql'"
     echo "4. Run the SQL script to create tables and seed data"
     echo ""
     echo "Press Enter when you've set up the database..."
@@ -230,7 +230,7 @@ create_summary() {
 - README.md - Full documentation
 - SELF_HOSTED_SETUP.md - Detailed setup guide
 - GROQ_BENEFITS.md - Why we use Groq
-- database-schema.sql - Database setup
+- create-correct-vector-function.sql - Complete database setup
 
 🆘 Support:
 - Check n8n execution logs for errors

@@ -44,7 +44,7 @@
 
 ### Phase 3: Import (Your n8n Server)
 4. **Access your n8n web interface** (browser)
-5. **Import workflow** (`legal-assistant-workflow.json`)
+5. **Import workflow** (`legal-assistant-bot-workflow.json`)
 6. **Configure credentials** in n8n interface
 7. **Activate workflow**
 

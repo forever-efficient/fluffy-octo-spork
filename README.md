@@ -27,10 +27,8 @@ Located in `/legal-assistant-n8n/`, this project includes:
 ```
 legal-assistant-n8n/           # Main project - Telegram legal bot
 ├── legal-assistant-bot-workflow.json    # Complete n8n workflow
-├── vector-database-schema-384.sql       # Vector database schema (384-dim)
-├── vector-search-function-384.sql       # Similarity search function
-├── migration-script-384.sql             # Migration from 1536 to 384 dims
-├── process-pdfs-from-storage.py         # PDF processing pipeline
+├── create-correct-vector-function.sql    # Complete database setup
+├── process-pdfs-from-storage-idempotent.py # PDF processing pipeline
 └── README.md                            # Detailed setup instructions
 
 docker-ai-n8n.yml             # Docker configuration for n8n

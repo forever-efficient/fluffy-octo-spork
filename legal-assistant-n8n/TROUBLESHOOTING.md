@@ -3,7 +3,7 @@
 ## � **IMMEDIATE FIX - Try This First:**
 
 ### **Option 1: Re-import Updated Workflow**
-1. **Download the updated** `legal-assistant-workflow.json` 
+1. **Download the updated** `legal-assistant-bot-workflow.json` 
 2. **Delete the hanging workflow** in your n8n
 3. **Import the new version** (I've fixed the problematic conditions)
 4. **Configure credentials** again
@@ -22,21 +22,24 @@
 
 ## 🔍 **Root Cause Analysis:**
 
-## 🧪 **Debug Test Workflow**
+## 🔍 **Debug Test Steps**
 
-If the main workflow still hangs, use this debug workflow to identify the exact issue:
+If the main workflow still hangs, use these debugging steps to identify the exact issue:
 
-1. **Import** `debug-test-workflow.json` into your n8n
-2. **Configure** the same Telegram credentials
-3. **Update your Telegram webhook** to point to the debug workflow:
-```bash
-curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook" \
-     -H "Content-Type: application/json" \
-     -d '{"url": "https://your-n8n-domain.com/webhook/telegram-webhook-test"}'
+1. **Add a debug Code node** after the Telegram Webhook trigger
+2. **Configure** the same Telegram credentials  
+3. **Use the debug code** provided below to inspect the data structure
+4. **Send a test message** - check n8n execution logs for debug output
+5. **Apply fixes** based on the debug information
+
+**Debug Code Node JavaScript:**
+```javascript
+// Debug webhook data structure
+console.log('=== WEBHOOK DEBUG ===');
+console.log('Full input data:', JSON.stringify($input.all(), null, 2));
+console.log('First item:', JSON.stringify($input.first(), null, 2));
+return $input.all();
 ```
-4. **Send a test message** - you'll get detailed debug info back
-5. **Check n8n execution logs** for the console output
-6. **Switch back** to main webhook once debugged
 
 ---
 

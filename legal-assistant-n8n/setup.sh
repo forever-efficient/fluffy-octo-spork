@@ -76,7 +76,7 @@ setup_database() {
     echo ""
     echo "1. Go to your Supabase project dashboard"
     echo "2. Navigate to the SQL Editor"
-    echo "3. Copy and paste the contents of 'database-schema.sql'"
+    echo "3. Copy and paste the contents of 'create-correct-vector-function.sql'"
     echo "4. Run the SQL script to create tables and seed data"
     echo ""
     echo "Press Enter when you've set up the database..."

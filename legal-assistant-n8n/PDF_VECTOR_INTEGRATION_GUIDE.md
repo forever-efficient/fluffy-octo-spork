@@ -12,15 +12,20 @@ Your legal assistant bot now has **modern vector-powered document search** with 
 ## 📋 Complete Setup Checklist
 
 ### 1. Database Setup (Required First)
-Execute these SQL scripts in your Supabase SQL Editor:
+Execute this SQL script in your Supabase SQL Editor:
 
 ```sql
--- 1. Create vector table (if not done already)
--- Run the contents of: database-schema.sql
-
--- 2. Create processing logs table
--- Run the contents of: document-processing-schema.sql
+-- Run the complete setup script
+-- File: create-correct-vector-function.sql
+-- This includes:
+-- • pgvector extension
+-- • legal_documents_vectors table schema
+-- • Vector search indexes (HNSW)
+-- • match_legal_documents function
+-- • Proper permissions
 ```
+
+**Important**: Use only `create-correct-vector-function.sql` for the complete setup.
 
 ### 2. Active Workflows
 - **Legal Assistant Bot** (ID: `gtwy0ByPxqHVR5ql`) - ✅ **ACTIVE** with vector search
