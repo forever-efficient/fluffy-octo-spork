@@ -420,6 +420,9 @@ Your legal assistant bot handles both **direct legal questions** and **criminal 
 - **[ADVANCED_CUSTOMIZATION.md](ADVANCED_CUSTOMIZATION.md)** - JavaScript code examples, API integrations, custom modifications
 - **[SETUP_FLOW.md](SETUP_FLOW.md)** - Visual setup process diagram
 
+### **🛠️ Helper Scripts:**
+- **[remove-duplicates.sql](remove-duplicates.sql)** - Database maintenance script to clean up duplicate vector entries (not part of main workflow)
+
 ---
 
 ## Roadmap
