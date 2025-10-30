@@ -1,0 +1,33 @@
+# Dockerfile for Telegram bot service
+# Lightweight, decoupled from main app
+# Only needs: telegram library + requests
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies (minimal)
+RUN pip install --no-cache-dir \
+    python-telegram-bot==20.3 \
+    requests==2.31.0
+
+# Create non-root user for security
+RUN useradd -m -u 1000 appuser
+
+# Copy Telegram bot code only
+COPY --chown=appuser:appuser telegram-bot /app/telegram-bot
+
+# Switch to non-root user
+USER appuser
+
+# Set environment
+ENV PYTHONUNBUFFERED=1 \
+    OFFLINE_MODE=true
+
+# Run Telegram bot
+CMD ["python", "-m", "telegram-bot.bot"]

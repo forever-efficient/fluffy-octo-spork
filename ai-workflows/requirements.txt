@@ -1,0 +1,24 @@
+# AI Workflows - Requirements
+# Core dependencies for local, offline-capable AI system
+# Install with: pip install -r requirements.txt
+
+# Core framework
+fastapi==0.104.1
+uvicorn==0.24.0
+
+# Configuration
+pyyaml==6.0.1
+
+# LLM and embeddings
+sentence-transformers==2.2.2
+huggingface-hub==0.17.3
+requests==2.31.0
+
+# Vector database
+chromadb==0.4.14
+
+# Telegram bot (optional)
+python-telegram-bot==20.3
+
+# Logging and monitoring
+python-json-logger==2.0.7

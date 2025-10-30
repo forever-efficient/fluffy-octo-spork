@@ -1,0 +1,15 @@
+# Default models configuration
+# Override in this file as needed
+
+models:
+  # Default embedding model (384-dimensional)
+  embedding:
+    name: "BAAI/bge-small-en-v1.5"
+    description: "BGE small embedding model optimized for semantic search"
+    
+  # Default LLM model
+  llm:
+    name: "mistral"
+    description: "Mistral 7B - fast, capable open-source model"
+    temperature: 0.7
+    top_p: 0.9

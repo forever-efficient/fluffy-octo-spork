@@ -1,0 +1,80 @@
+services:
+  # Ollama - LLM inference engine
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai-workflows-ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-mistral}
+    volumes:
+      - ollama_models:/root/.ollama
+      - ./ollama-entrypoint.sh:/entrypoint.sh:ro
+    networks:
+      - ai-workflows-network
+    restart: unless-stopped
+    entrypoint: bash /entrypoint.sh
+    healthcheck:
+      test: ["CMD", "bash", "-c", "/bin/ollama list | grep -q mistral"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 120s
+
+  # Main AI application (REST API)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-workflows-app
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      - OFFLINE_MODE=${OFFLINE_MODE:-true}
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-mistral}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+    volumes:
+      - ./config:/app/config:ro
+      - chroma_data:/app/data
+    networks:
+      - ai-workflows-network
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Telegram bot service (completely decoupled)
+  telegram-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile.telegram
+    container_name: ai-workflows-telegram-bot
+    environment:
+      - OFFLINE_MODE=${OFFLINE_MODE:-true}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_API_URL=http://app:8000
+    networks:
+      - ai-workflows-network
+    depends_on:
+      - app
+    restart: unless-stopped
+    profiles:
+      - telegram
+
+volumes:
+  ollama_models:
+    driver: local
+  chroma_data:
+    driver: local
+
+networks:
+  ai-workflows-network:
+    driver: bridge
