@@ -16,11 +16,11 @@ services:
     restart: unless-stopped
     entrypoint: bash /entrypoint.sh
     healthcheck:
-      test: ["CMD", "bash", "-c", "/bin/ollama list | grep -q mistral"]
-      interval: 10s
+      test: ["CMD", "bash", "-c", "/bin/ollama list | grep -q orca-mini"]
+      interval: 5s
       timeout: 5s
-      retries: 30
-      start_period: 120s
+      retries: 120
+      start_period: 10s
 
   # Main AI application (REST API)
   app:
