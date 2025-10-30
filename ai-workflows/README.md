@@ -310,6 +310,30 @@ See `.env.example` for all available variables:
 - `TELEGRAM_BOT_TOKEN` - Telegram bot token (optional)
 - `TELEGRAM_API_URL` - API URL for bot to call
 
+## Maintenance
+
+### Disk Space Management
+
+Docker build cache can accumulate over time. Clean it up regularly:
+
+```bash
+# Remove all unused build cache
+docker builder prune -af
+
+# Remove dangling images
+docker image prune -af
+
+# Full system cleanup (removes unused volumes/networks too)
+docker system prune -af
+```
+
+**Estimated disk usage:**
+- Docker images: ~10GB (Ollama + ai-workflows)
+- Volumes (persistent data): ~4-5GB (Ollama models + Chroma vectors)
+- **Total: ~14-15GB** (intentional - models persist across restarts)
+
+**Recommendation:** Run `docker builder prune -af` monthly to prevent build cache from consuming excessive disk space.
+
 ## License
 
 See LICENSE file for details.
