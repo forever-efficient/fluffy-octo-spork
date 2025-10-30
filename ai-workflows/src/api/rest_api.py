@@ -183,6 +183,33 @@ def create_app() -> Optional[FastAPI]:
         """Get current configuration."""
         return config.to_dict()
     
+    @app.get("/collections")
+    async def list_collections():
+        """
+        List all collections in the database.
+        
+        Returns:
+            List of collections with document counts
+        """
+        try:
+            client = vector_db._get_client()
+            collections = client.list_collections()
+            result = {
+                "status": "success",
+                "total": len(collections),
+                "collections": [
+                    {
+                        "name": col.name,
+                        "document_count": col.count(),
+                    }
+                    for col in collections
+                ]
+            }
+            return result
+        except Exception as e:
+            logger.error(f"Failed to list collections: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+    
     @app.delete("/collections/{collection_name}")
     async def delete_collection(collection_name: str):
         """
