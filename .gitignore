@@ -6,6 +6,9 @@ legal-assistant-n8n/.env
 legal-assistant-n8n/pdf_processing.log
 *.log
 
+# Distribution bundles
+*.tar.gz
+
 # Python
 __pycache__/
 *.pyc
