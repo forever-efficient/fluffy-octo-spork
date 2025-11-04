@@ -12,6 +12,8 @@ Respects OFFLINE_MODE from configuration.
 """
 
 import logging
+import hashlib
+from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 try:
@@ -24,6 +26,7 @@ except ImportError:
 from ..config import config
 from ..embeddings import ChromaVectorDB, EmbeddingModel
 from ..models import OllamaModel
+from ..legal_chunker import LegalChunker
 from ..rag import RAGPipeline
 
 logger = logging.getLogger(__name__)
@@ -43,6 +46,24 @@ class QueryInput(BaseModel):
     n_results: int = 5
     collection: str = "documents"
     temperature: float = 0.7
+
+
+class LegalIngestInput(BaseModel):
+    """Input model for legal document ingestion via LegalChunker."""
+    text: str
+    collection: str = "documents"
+    min_tokens: int = 50
+    max_tokens: int = 800
+
+
+class DirectoryIngestInput(BaseModel):
+    """Input model to ingest PDFs from the static project data directory using LegalChunker."""
+    collection: str = "documents"
+    recursive: bool = True
+    pattern: str = "*.pdf"
+    min_tokens: int = 50
+    max_tokens: int = 800
+    skip_on_duplicate: bool = True
 
 
 class HealthResponse(BaseModel):
@@ -118,6 +139,205 @@ def create_app() -> Optional[FastAPI]:
             }
         except Exception as e:
             logger.error(f"Failed to add documents: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/documents/ingest-legal")
+    async def ingest_legal(input_data: LegalIngestInput):
+        """
+        Ingest a raw legal document text using the LegalChunker and store chunks in ChromaDB.
+
+        Steps:
+        - Parse text into hierarchical legal chunks (sections/subsections)
+        - Enforce token bounds (min/max) per request
+        - Prepare documents/metadatas/ids for ChromaDB
+        - Add to the specified vector collection
+
+        Returns:
+            Status with counts and the first few IDs as a preview
+        """
+        try:
+            chunker = LegalChunker(min_tokens=input_data.min_tokens, max_tokens=input_data.max_tokens)
+            chunks = chunker.parse_document(input_data.text)
+            documents, metadatas, ids = LegalChunker.prepare_for_chromadb(chunks)
+
+            if not documents:
+                return {
+                    "status": "success",
+                    "added": 0,
+                    "ids": [],
+                    "collection": input_data.collection,
+                    "chunks": 0,
+                }
+
+            result = vector_db.add_documents(
+                collection_name=input_data.collection,
+                documents=documents,
+                ids=ids,
+                metadatas=metadatas,
+            )
+            return {
+                "status": "success",
+                "added": len(documents),
+                "ids": result.get("ids", ids)[:10],  # preview first 10 IDs
+                "collection": input_data.collection,
+                "chunks": len(documents),
+            }
+        except Exception as e:
+            logger.error(f"Legal ingestion failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/documents/ingest-legal-dir")
+    async def ingest_legal_directory(input_data: DirectoryIngestInput):
+        """
+        Ingest all PDF files from the project's static data directory, parse with
+        LegalChunker, and upsert into ChromaDB.
+
+        Idempotency:
+        - Compute SHA256 of each file and store in metadata as `file_sha256`.
+        - If `skip_on_duplicate` is True and any document exists with same hash in the
+          target collection, the file will be skipped.
+
+        Returns a summary with counts and per-file results.
+        """
+        try:
+            # Compute project root: ai-workflows
+            project_root = Path(__file__).resolve().parents[2]
+            base_path = project_root / "data"
+            if not base_path.exists() or not base_path.is_dir():
+                raise HTTPException(status_code=400, detail=f"Data directory not found: {base_path}")
+
+            # Gather files
+            files: List[Path] = []
+            if input_data.recursive:
+                files = list(base_path.rglob(input_data.pattern))
+            else:
+                files = list(base_path.glob(input_data.pattern))
+
+            files = [p for p in files if p.is_file()]
+            if not files:
+                return {
+                    "status": "success",
+                    "message": "No files matched in data directory",
+                    "scanned_files": 0,
+                    "ingested_files": 0,
+                    "skipped_files": 0,
+                    "collection": input_data.collection,
+                    "results": [],
+                }
+
+            # Access collection directly to check by metadata filters
+            client = vector_db._get_client()
+            collection = client.get_or_create_collection(input_data.collection)
+
+            from pypdf import PdfReader  # lazy import to avoid import cost when unused
+
+            def sha256_of_file(path: Path) -> str:
+                h = hashlib.sha256()
+                with path.open('rb') as f:
+                    for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                        h.update(chunk)
+                return h.hexdigest()
+
+            chunker = LegalChunker(min_tokens=input_data.min_tokens, max_tokens=input_data.max_tokens)
+
+            scanned = 0
+            ingested = 0
+            skipped = 0
+            per_file_results: List[Dict[str, Any]] = []
+
+            for fpath in files:
+                scanned += 1
+                try:
+                    file_hash = sha256_of_file(fpath)
+
+                    # Idempotency check
+                    if input_data.skip_on_duplicate:
+                        existing = collection.get(where={"file_sha256": file_hash}, limit=1)
+                        if existing and existing.get("ids"):
+                            skipped += 1
+                            per_file_results.append({
+                                "file": str(fpath),
+                                "status": "skipped",
+                                "reason": "duplicate",
+                                "file_sha256": file_hash,
+                            })
+                            continue
+
+                    # Extract text
+                    reader = PdfReader(str(fpath))
+                    pages_text: List[str] = []
+                    for page in reader.pages:
+                        try:
+                            pages_text.append(page.extract_text() or "")
+                        except Exception:
+                            pages_text.append("")
+                    full_text = "\n\n".join(pages_text).strip()
+
+                    if not full_text:
+                        skipped += 1
+                        per_file_results.append({
+                            "file": str(fpath),
+                            "status": "skipped",
+                            "reason": "no_text",
+                        })
+                        continue
+
+                    # Chunk using LegalChunker
+                    chunks = chunker.parse_document(full_text)
+                    documents, metadatas, ids = LegalChunker.prepare_for_chromadb(chunks)
+
+                    # Enrich metadata with file info and hash for idempotency
+                    for md in metadatas:
+                        md.update({
+                            "source": "pdf",
+                            "file_name": fpath.name,
+                            "file_path": str(fpath),
+                            "file_sha256": file_hash,
+                            "page_count": len(pages_text),
+                        })
+
+                    if documents:
+                        # Use vector_db to ensure embeddings are generated
+                        vector_db.add_documents(
+                            collection_name=input_data.collection,
+                            documents=documents,
+                            ids=ids,
+                            metadatas=metadatas,
+                        )
+                        ingested += 1
+                        per_file_results.append({
+                            "file": str(fpath),
+                            "status": "ingested",
+                            "chunks": len(documents),
+                            "file_sha256": file_hash,
+                        })
+                    else:
+                        skipped += 1
+                        per_file_results.append({
+                            "file": str(fpath),
+                            "status": "skipped",
+                            "reason": "no_chunks",
+                        })
+                except Exception as fe:
+                    skipped += 1
+                    per_file_results.append({
+                        "file": str(fpath),
+                        "status": "error",
+                        "error": str(fe),
+                    })
+
+            return {
+                "status": "success",
+                "collection": input_data.collection,
+                "scanned_files": scanned,
+                "ingested_files": ingested,
+                "skipped_files": skipped,
+                "results": per_file_results[:20],  # preview first 20 files
+            }
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Directory legal ingestion failed: {e}")
             raise HTTPException(status_code=500, detail=str(e))
     
     @app.post("/query")

@@ -37,7 +37,9 @@ env/
 *~
 
 # Data and logs
-data/
+# Keep the data directory in repo but ignore its contents except .gitkeep
+data/*
+!data/.gitkeep
 logs/
 *.log
 

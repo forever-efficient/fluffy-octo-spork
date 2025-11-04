@@ -17,6 +17,9 @@ requests==2.31.0
 # Vector database
 chromadb==0.4.14
 
+# PDF processing
+pypdf==3.17.1
+
 # Telegram bot (optional)
 python-telegram-bot==20.3
 

@@ -97,6 +97,48 @@ Base URL: `http://localhost:8000`
 - `POST /documents/add` - Add documents to vector DB
 - `POST /query` - Run RAG query
 - `POST /generate` - Generate text (no RAG)
+ - `GET /collections` - List all collections with counts
+ - `DELETE /collections/{name}` - Delete a collection and all documents
+ - `DELETE /documents?collection=...&ids=...` - Delete specific documents by ID
+ - `POST /documents/ingest-legal` - Ingest raw legal text using the LegalChunker
+ - `POST /documents/ingest-legal-dir` - Ingest all PDFs from ai-workflows/data (idempotent)
+
+#### Ingest raw legal text
+
+```bash
+curl -X POST http://localhost:8000/documents/ingest-legal \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "TITLE 24 GOVERNMENT - STATE...",
+    "collection": "statutes",
+    "min_tokens": 50,
+    "max_tokens": 800
+  }'
+```
+
+#### Ingest PDFs from the static data directory (idempotent)
+
+Place your PDFs under `ai-workflows/data/` in the repository. The endpoint scans this folder (recursively by default) and ingests any new files.
+
+```bash
+curl -X POST http://localhost:8000/documents/ingest-legal-dir \
+  -H "Content-Type: application/json" \
+  -d '{
+    "collection": "statutes",
+    "recursive": true,
+    "pattern": "*.pdf",
+    "skip_on_duplicate": true,
+    "min_tokens": 50,
+    "max_tokens": 800
+  }'
+```
+
+Response includes counts and a preview of per-file results. Files are skipped if a document with the same `file_sha256` already exists in the collection.
+
+Notes:
+- The path is relative to the project and works the same on any machine.
+- If running in Docker and you want to add files without rebuilding, bind-mount a host folder to `/app/data` in the app container.
+- The `ai-workflows/data` directory is kept in version control, but its contents are git-ignored. Only the `.gitkeep` file is tracked to ensure the folder always exists.
 
 ### Python SDK
 
@@ -232,12 +274,12 @@ docker-compose restart telegram-bot
 
 - Reduce Ollama model size (use `orca-mini` instead of `mistral`)
 - Reduce `n_results` in queries
-- Clear Chroma database: `docker volume rm ai-workflows_chroma_data`
+- Clear Chroma database: delete the folder `ai-workflows/data/chroma_db` (it will be recreated on next start)
 
 ## Data Persistence
 
 - **Ollama models**: Docker volume `ollama_models`
-- **Chroma embeddings**: Docker volume `chroma_data`
+- **Chroma embeddings**: Host folder `ai-workflows/data/chroma_db` (bind-mounted to `/app/data/chroma_db`)
 - **Configuration**: Mounted read-only from `./config/`
 
 Models and embeddings persist across:
