@@ -286,6 +286,9 @@ def create_app() -> Optional[FastAPI]:
                     chunks = chunker.parse_document(full_text)
                     documents, metadatas, ids = LegalChunker.prepare_for_chromadb(chunks)
 
+                    # Ensure global uniqueness across files by prefixing with file hash and chunk index
+                    ids = [f"{file_hash[:12]}::{i:04d}::{base_id}" for i, base_id in enumerate(ids)]
+
                     # Enrich metadata with file info and hash for idempotency
                     for md in metadatas:
                         md.update({

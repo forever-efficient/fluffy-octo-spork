@@ -413,20 +413,31 @@ class LegalChunker:
         metadatas: List[Dict[str, Any]] = []
         ids: List[str] = []
 
+        # Ensure IDs are unique even when a subsection yields multiple chunks
+        base_id_counts: Dict[str, int] = {}
+
         for ch in chunks:
             documents.append(ch.get_searchable_text())
+            base_id = ch.section_number if not ch.subsection else f"{ch.section_number}_{ch.subsection}"
+            idx = base_id_counts.get(base_id, 0)
+            base_id_counts[base_id] = idx + 1
+
+            # Unique ID within this preparation batch
+            unique_id = base_id if idx == 0 else f"{base_id}#{idx}"
+
+            # Ensure metadata values are primitives (no None) to satisfy Chroma
             metadatas.append(
                 {
-                    "section_number": ch.section_number,
-                    "section_title": ch.section_title,
-                    "subsection": ch.subsection,
-                    "hierarchy": ch.hierarchy,
-                    "full_citation": ch.full_citation,
-                    "token_count": ch.token_count,
+                    "section_number": str(ch.section_number),
+                    "section_title": str(ch.section_title),
+                    "subsection": "" if ch.subsection is None else str(ch.subsection),
+                    "hierarchy": " | ".join(ch.hierarchy) if ch.hierarchy else "",
+                    "full_citation": str(ch.full_citation),
+                    "token_count": int(ch.token_count),
+                    "chunk_index": int(idx),
                 }
             )
-            sid = ch.section_number if not ch.subsection else f"{ch.section_number}_{ch.subsection}"
-            ids.append(sid)
+            ids.append(unique_id)
 
         return documents, metadatas, ids
 
