@@ -376,6 +376,26 @@ docker system prune -af
 
 **Recommendation:** Run `docker builder prune -af` monthly to prevent build cache from consuming excessive disk space.
 
+#### macOS quick cleanup script
+
+At the repo root, we provide a safe macOS/Docker Desktop cleanup helper:
+
+```bash
+# Make it executable (first time only)
+chmod +x ../docker-prune-macos.sh 2>/dev/null || chmod +x docker-prune-macos.sh
+
+# Safe defaults: prune build cache + unused images
+./docker-prune-macos.sh
+
+# Also remove stopped containers/networks (aggressive)
+./docker-prune-macos.sh -a
+
+# Also prune unused volumes (WARNING: irreversible)
+./docker-prune-macos.sh -v
+```
+
+This script shows before/after `docker system df` and avoids touching your bind-mounted data in `ai-workflows/data`.
+
 ## License
 
 See LICENSE file for details.

@@ -21,6 +21,11 @@ services:
       timeout: 5s
       retries: 120
       start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Main AI application (REST API)
   app:
@@ -50,6 +55,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Telegram bot service (completely decoupled)
   telegram-bot:
